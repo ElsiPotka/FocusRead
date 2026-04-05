@@ -1,0 +1,1 @@
+"""Book-related application services."""
