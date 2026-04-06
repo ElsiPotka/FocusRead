@@ -74,6 +74,6 @@ Thumbs.db
 .vscode/
 
 # Local project notes / AI tooling
-IDEA.md
+docs/
 .claude/
 .codex/
