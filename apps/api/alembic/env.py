@@ -33,7 +33,7 @@ if config.config_file_name is not None:
 
 target_metadata = Base.metadata
 
-_EXCLUDED_TABLES: set[str] = {"books"}
+_EXCLUDED_TABLES: set[str] = set()
 
 
 def include_name(

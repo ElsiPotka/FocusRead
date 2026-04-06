@@ -1,1 +1,40 @@
-"""Book aggregate root."""
+from app.domain.books.entities import Book, BookStatus
+from app.domain.books.repositories import BookRepository
+from app.domain.books.value_objects import (
+    BookCoverImagePath,
+    BookDescription,
+    BookDocumentType,
+    BookFilePath,
+    BookId,
+    BookLanguage,
+    BookPageCount,
+    BookProcessingError,
+    BookPublishedYear,
+    BookPublisher,
+    BookSourceFilename,
+    BookSubtitle,
+    BookTitle,
+    BookTotalChunks,
+    BookWordCount,
+)
+
+__all__ = [
+    "Book",
+    "BookCoverImagePath",
+    "BookDescription",
+    "BookDocumentType",
+    "BookFilePath",
+    "BookId",
+    "BookLanguage",
+    "BookPageCount",
+    "BookProcessingError",
+    "BookPublishedYear",
+    "BookPublisher",
+    "BookRepository",
+    "BookSourceFilename",
+    "BookStatus",
+    "BookSubtitle",
+    "BookTitle",
+    "BookTotalChunks",
+    "BookWordCount",
+]

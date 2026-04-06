@@ -64,3 +64,14 @@ line-ending = "auto"
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 asyncio_mode = "auto"
+
+[tool.basedpyright]
+pythonVersion = "3.14"
+typeCheckingMode = "standard"
+include = ["app", "tests", "alembic"]
+exclude = [
+    ".venv",
+    "**/__pycache__",
+    "build",
+    "dist",
+]

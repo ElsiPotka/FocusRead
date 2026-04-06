@@ -7,6 +7,7 @@ from app.presentation.api.schemas.base import (
     BaseSchema,
     SoftDeletableSchema,
 )
+from app.presentation.api.schemas.books import BookResponse, UpdateBookRequest
 from app.presentation.api.schemas.mixins import (
     AuditMixin,
     MetadataMixin,
@@ -44,6 +45,7 @@ __all__ = [
     "BaseAPIResponse",
     "BaseORMSchema",
     "BaseSchema",
+    "BookResponse",
     "BulkUserRolesRequest",
     "CurrentUserProfileResponse",
     "ErrorResponse",
@@ -63,5 +65,6 @@ __all__ = [
     "UserRolesResponse",
     "UUIDMixin",
     "VersionMixin",
+    "UpdateBookRequest",
     "RoleResponse",
 ]

@@ -1,18 +1,22 @@
 import re
+from typing import ClassVar
 
 from sqlalchemy import String
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, declared_attr, mapped_column
 
 
 class SlugMixin:
-    """Adds a unique slug column and normalized slug generator."""
+    """Adds a slug column and normalized slug generator."""
 
-    slug: Mapped[str | None] = mapped_column(
-        String(255),
-        unique=True,
-        nullable=True,
-        comment="URL-friendly identifier",
-    )
+    __slug_nullable__: ClassVar[bool] = True
+
+    @declared_attr
+    def slug(cls) -> Mapped[str | None]:
+        return mapped_column(
+            String(255),
+            nullable=cls.__slug_nullable__,
+            comment="URL-friendly identifier",
+        )
 
     @staticmethod
     def generate_slug(title: str) -> str:

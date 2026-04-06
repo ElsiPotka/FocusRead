@@ -33,8 +33,9 @@ class TestUserId:
 
     def test_frozen(self):
         uid = UserId.generate()
+        attribute_name = "value"
         with pytest.raises(AttributeError):
-            uid.value = UUID("01234567-89ab-cdef-0123-456789abcdef")  # type: ignore[misc]
+            setattr(uid, attribute_name, UUID("01234567-89ab-cdef-0123-456789abcdef"))
 
 
 class TestEmail:

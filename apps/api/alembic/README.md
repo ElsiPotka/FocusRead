@@ -14,6 +14,8 @@ This folder contains the database migration environment for the API.
 - if you add a new SQLAlchemy model, export it from `app/infrastructure/persistence/models/__init__.py`
 - `env.py` currently excludes some tables through `_EXCLUDED_TABLES`; review that list before relying on `--autogenerate`
 - migrations use `uuidv7()` server defaults, so the database must provide that function
+- reusable PostgreSQL full-text search helpers live in `app/infrastructure/persistence/migrations/search.py`
+- for `SearchMixin` models, use PostgreSQL stored generated `tsvector` columns plus a `GIN` index instead of triggers or ad hoc application-side updates
 
 ## Typical Workflow
 

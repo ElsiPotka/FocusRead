@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from datetime import UTC, datetime
-
 from app.domain.account.entities import Account
 from app.domain.auth.value_objects import (
     AccountId,

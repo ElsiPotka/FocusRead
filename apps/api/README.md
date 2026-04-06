@@ -133,11 +133,17 @@ Migration filenames are timestamp-prefixed in `YYYY-MM-DD_HHMM_<rev>_<slug>.py` 
 
 ## Quality Checks
 
-Run the full test suite:
+After every code change, run this validation sequence from `apps/api`:
 
 ```bash
+uv run ruff check . --fix
+uv run ruff format .
+uvx ty check
+uvx basedpyright
 uv run pytest
 ```
+
+If you are iterating on one slice, these focused test commands are useful before the full suite:
 
 Run only domain tests:
 
@@ -149,18 +155,6 @@ Run only use-case tests:
 
 ```bash
 uv run pytest tests/usecase
-```
-
-Lint:
-
-```bash
-uv run ruff check .
-```
-
-Format:
-
-```bash
-uv run ruff format .
 ```
 
 ## How To Add A New Feature
