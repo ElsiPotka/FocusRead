@@ -3,6 +3,7 @@ from __future__ import annotations
 from datetime import UTC, datetime, timedelta
 from typing import TYPE_CHECKING, Any
 
+from app.application.auth.scopes import build_access_token_scopes
 from app.domain.auth.entities import Account, Session, User
 from app.domain.auth.value_objects import (
     AccountId,
@@ -10,10 +11,12 @@ from app.domain.auth.value_objects import (
     ProviderId,
     RefreshTokenHash,
 )
+from app.domain.role.value_objects import RoleName
 from app.infrastructure.config.settings import settings
 
 if TYPE_CHECKING:
     from app.application.common.unit_of_work import AbstractUnitOfWork
+    from app.domain.role.entities import Role
     from app.infrastructure.auth.jwt_service import JWTService
     from app.infrastructure.auth.session_service import SessionService
 
@@ -43,6 +46,7 @@ class HandleOAuthCallback:
         email_str = oauth_user_info.get("email", "")
         name = oauth_user_info.get("given_name", oauth_user_info.get("name", ""))
         surname = oauth_user_info.get("family_name", "")
+        roles: list[Role] = []
 
         existing_account = await self._uow.accounts.get_by_provider(provider_id, sub)
 
@@ -59,6 +63,7 @@ class HandleOAuthCallback:
                 scope=oauth_tokens.get("scope"),
             )
             await self._uow.accounts.save(existing_account)
+            roles = await self._uow.roles.list_for_user(user.id)
         else:
             email_vo = Email(email_str) if email_str else None
             user = None
@@ -76,6 +81,15 @@ class HandleOAuthCallback:
                 )
                 user.verify_email()
                 await self._uow.users.save(user)
+
+                client_role = await self._uow.roles.get_by_name(RoleName.CLIENT)
+                if client_role is None:
+                    msg = "Default Client role is not configured."
+                    raise RuntimeError(msg)
+                await self._uow.roles.assign_to_user(user.id, client_role.id)
+                roles = [client_role]
+            else:
+                roles = await self._uow.roles.list_for_user(user.id)
 
             account = Account.create_oauth(
                 user_id=user.id,
@@ -104,7 +118,11 @@ class HandleOAuthCallback:
         await self._uow.sessions.save(auth_session)
 
         private_key, _ = await self._jwt.get_or_create_key_pair(self._uow)
-        access_token = self._jwt.encode_access_token(str(user.id.value), private_key)
+        access_token = self._jwt.encode_access_token(
+            str(user.id.value),
+            private_key,
+            scopes=build_access_token_scopes(roles),
+        )
 
         await self._uow.commit()
 

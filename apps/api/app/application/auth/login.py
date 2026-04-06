@@ -3,6 +3,7 @@ from __future__ import annotations
 from datetime import UTC, datetime, timedelta
 from typing import TYPE_CHECKING
 
+from app.application.auth.scopes import build_access_token_scopes
 from app.domain.auth.entities import Session, User
 from app.domain.auth.errors import InactiveUserError, InvalidCredentialsError
 from app.domain.auth.value_objects import Email, RefreshTokenHash
@@ -68,8 +69,13 @@ class LoginUser:
 
         await self._uow.sessions.save(auth_session)
 
+        roles = await self._uow.roles.list_for_user(user.id)
         private_key, _ = await self._jwt.get_or_create_key_pair(self._uow)
-        access_token = self._jwt.encode_access_token(str(user.id.value), private_key)
+        access_token = self._jwt.encode_access_token(
+            str(user.id.value),
+            private_key,
+            scopes=build_access_token_scopes(roles),
+        )
 
         await self._uow.commit()
 

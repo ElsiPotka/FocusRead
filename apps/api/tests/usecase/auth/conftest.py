@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from unittest.mock import AsyncMock, Mock
+from unittest.mock import AsyncMock
 
 import pytest
 
@@ -11,6 +11,7 @@ from app.domain.auth.repositories import (
     SessionRepository,
     UserRepository,
 )
+from app.domain.role.repositories import RoleRepository
 from app.infrastructure.auth.jwt_service import JWTService
 from app.infrastructure.auth.session_service import SessionService
 
@@ -26,6 +27,11 @@ def account_repo():
 
 
 @pytest.fixture
+def role_repo():
+    return AsyncMock(spec=RoleRepository)
+
+
+@pytest.fixture
 def session_repo():
     return AsyncMock(spec=SessionRepository)
 
@@ -36,9 +42,10 @@ def jwt_signing_key_repo():
 
 
 @pytest.fixture
-def uow(user_repo, account_repo, session_repo, jwt_signing_key_repo):
+def uow(user_repo, account_repo, role_repo, session_repo, jwt_signing_key_repo):
     mock = AsyncMock(spec=AbstractUnitOfWork)
     mock.users = user_repo
+    mock.roles = role_repo
     mock.accounts = account_repo
     mock.sessions = session_repo
     mock.jwt_signing_keys = jwt_signing_key_repo

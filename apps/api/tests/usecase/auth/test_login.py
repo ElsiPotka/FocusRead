@@ -8,6 +8,8 @@ from app.application.auth.login import LoginUser
 from app.domain.account.entities import Account
 from app.domain.auth.errors import InactiveUserError, InvalidCredentialsError
 from app.domain.auth.value_objects import Email, HashedPassword, UserId
+from app.domain.role.entities import Role
+from app.domain.role.value_objects import RoleName
 from app.domain.user.entities import User
 
 
@@ -23,6 +25,13 @@ def _credential_account(user_id: UserId) -> Account:
     )
 
 
+def _client_role() -> Role:
+    return Role.create(
+        name=RoleName.CLIENT,
+        description="Default client access",
+    )
+
+
 class TestLoginUser:
     async def test_login_succeeds_with_valid_credentials(
         self, uow, jwt_service, session_service
@@ -30,6 +39,7 @@ class TestLoginUser:
         user = _active_user()
         uow.users.get_by_email.return_value = user
         uow.accounts.get_credential_by_user.return_value = _credential_account(user.id)
+        uow.roles.list_for_user.return_value = [_client_role()]
 
         usecase = LoginUser(uow, jwt_service, session_service)
 
@@ -48,6 +58,11 @@ class TestLoginUser:
         assert refresh_token == "raw_refresh_token_xxx"
         uow.sessions.save.assert_called_once()
         uow.commit.assert_called_once()
+        jwt_service.encode_access_token.assert_called_once_with(
+            str(user.id.value),
+            "private_pem",
+            scopes=["me", "Client"],
+        )
 
     async def test_login_raises_when_user_not_found(
         self, uow, jwt_service, session_service
@@ -65,9 +80,7 @@ class TestLoginUser:
         ):
             await usecase.execute(email="nobody@example.com", password="pass1234")
 
-    async def test_login_raises_when_inactive(
-        self, uow, jwt_service, session_service
-    ):
+    async def test_login_raises_when_inactive(self, uow, jwt_service, session_service):
         user = _active_user()
         user.deactivate()
         uow.users.get_by_email.return_value = user

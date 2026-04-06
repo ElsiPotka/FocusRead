@@ -11,6 +11,8 @@ from app.domain.auth.errors import (
     SessionExpiredError,
 )
 from app.domain.auth.value_objects import Email, RefreshTokenHash, UserId
+from app.domain.role.entities import Role
+from app.domain.role.value_objects import RoleName
 from app.domain.session.entities import Session
 from app.domain.user.entities import User
 
@@ -28,6 +30,13 @@ def _session(user_id: UserId, *, expired: bool = False) -> Session:
     )
 
 
+def _client_role() -> Role:
+    return Role.create(
+        name=RoleName.CLIENT,
+        description="Default client access",
+    )
+
+
 class TestRefreshAccessToken:
     async def test_refresh_rotates_session_and_returns_new_tokens(
         self, uow, jwt_service, session_service
@@ -36,6 +45,7 @@ class TestRefreshAccessToken:
         session = _session(user.id)
         uow.sessions.get_by_token_hash.return_value = session
         uow.users.get.return_value = user
+        uow.roles.list_for_user.return_value = [_client_role()]
 
         usecase = RefreshAccessToken(uow, jwt_service, session_service)
         result_user, access_token, refresh_token = await usecase.execute(
@@ -49,6 +59,11 @@ class TestRefreshAccessToken:
         uow.commit.assert_called_once()
         session_service.invalidate_cached_session.assert_called()
         session_service.cache_session.assert_called_once()
+        jwt_service.encode_access_token.assert_called_once_with(
+            str(user.id.value),
+            "private_pem",
+            scopes=["me", "Client"],
+        )
 
     async def test_refresh_raises_when_session_not_found(
         self, uow, jwt_service, session_service

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Never
 
 from fastapi import APIRouter, Cookie, Depends, Query, Request, Response, status
 from fastapi.responses import RedirectResponse  # noqa: TC002
@@ -94,15 +94,16 @@ def _deliver_tokens(
     if is_mobile:
         tokens = _build_token_response(access_token, refresh_token)
         return APIResponse(
+            success=True,
             data=AuthResponse(user=user_resp, tokens=tokens),
             message="Authenticated",
         )
 
     _set_auth_cookies(response, access_token, refresh_token)
-    return APIResponse(data=user_resp, message="Authenticated")
+    return APIResponse(success=True, data=user_resp, message="Authenticated")
 
 
-def _handle_auth_error(exc: AuthError) -> None:
+def _handle_auth_error(exc: AuthError) -> Never:
     from app.application.common.errors import ApplicationError
 
     status_code, message = _AUTH_ERROR_MAP.get(type(exc), (400, str(exc)))
@@ -127,7 +128,7 @@ async def register(
     use_case = RegisterUser(uow, jwt_service, session_service)
 
     try:
-        user, access_token, refresh_token = await use_case.execute(
+        result = await use_case.execute(
             name=body.name,
             surname=body.surname,
             email=body.email,
@@ -136,6 +137,7 @@ async def register(
     except AuthError as exc:
         _handle_auth_error(exc)
 
+    user, access_token, refresh_token = result
     return _deliver_tokens(
         response, user, access_token, refresh_token, is_mobile=client == "mobile"
     )
@@ -156,13 +158,14 @@ async def login(
     use_case = LoginUser(uow, jwt_service, session_service)
 
     try:
-        user, access_token, refresh_token = await use_case.execute(
+        result = await use_case.execute(
             email=form_data.username,
             password=form_data.password,
         )
     except AuthError as exc:
         _handle_auth_error(exc)
 
+    user, access_token, refresh_token = result
     return _deliver_tokens(
         response, user, access_token, refresh_token, is_mobile=client == "mobile"
     )
@@ -190,12 +193,13 @@ async def refresh(
     use_case = RefreshAccessToken(uow, jwt_service, session_service)
 
     try:
-        user, access_token, new_refresh = await use_case.execute(
+        result = await use_case.execute(
             raw_refresh_token=raw_refresh,
         )
     except AuthError as exc:
         _handle_auth_error(exc)
 
+    user, access_token, new_refresh = result
     return _deliver_tokens(
         response, user, access_token, new_refresh, is_mobile=client == "mobile"
     )
@@ -228,7 +232,7 @@ async def logout(
     response.delete_cookie("access_token", path="/")
     response.delete_cookie("refresh_token", path="/")
 
-    return MessageResponse(message="Logged out")
+    return MessageResponse(success=True, message="Logged out")
 
 
 @router.get("/google/authorize")

@@ -9,7 +9,10 @@ from app.infrastructure.persistence.models.base_model import BaseModel
 
 if TYPE_CHECKING:
     from app.infrastructure.persistence.models.account import AccountModel
+    from app.infrastructure.persistence.models.role import RoleModel
     from app.infrastructure.persistence.models.session import SessionModel
+
+from app.infrastructure.persistence.models.role import user_roles_table
 
 
 class UserModel(BaseModel):
@@ -34,6 +37,11 @@ class UserModel(BaseModel):
     sessions: Mapped[list[SessionModel]] = relationship(
         back_populates="user",
         cascade="all, delete-orphan",
+        lazy="raise",
+    )
+    roles: Mapped[list[RoleModel]] = relationship(
+        secondary=user_roles_table,
+        back_populates="users",
         lazy="raise",
     )
 

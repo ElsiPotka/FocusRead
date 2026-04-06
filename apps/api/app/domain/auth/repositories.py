@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from app.domain.account.entities import Account
@@ -13,6 +13,7 @@ if TYPE_CHECKING:
     )
     from app.domain.session.entities import Session
     from app.domain.user.entities import User
+    from app.domain.user.profile import UserProfile
 
 
 class UserRepository(ABC):
@@ -26,9 +27,16 @@ class UserRepository(ABC):
     async def get_by_email(self, email: Email) -> User | None: ...
 
     @abstractmethod
-    async def get_with_linked_accounts(
-        self, user_id: UserId
-    ) -> tuple[User, list[Account]] | None: ...
+    async def get_profile(self, user_id: UserId) -> UserProfile | None: ...
+
+    @abstractmethod
+    async def paginate_profiles(
+        self,
+        *,
+        page: int,
+        per_page: int,
+        cursor: str | None = None,
+    ) -> dict[str, Any]: ...
 
 
 class AccountRepository(ABC):

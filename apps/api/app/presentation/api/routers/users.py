@@ -1,6 +1,8 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends
+from typing import TYPE_CHECKING
+
+from fastapi import APIRouter, Depends, Security
 
 from app.application.auth.get_current_user_profile import GetCurrentUserProfile
 from app.application.common.errors import ApplicationError
@@ -9,12 +11,15 @@ from app.presentation.api.middleware.auth import get_current_user
 from app.presentation.api.schemas.response import APIResponse
 from app.presentation.api.schemas.users import CurrentUserProfileResponse
 
+if TYPE_CHECKING:
+    from app.domain.auth.entities import User
+
 router = APIRouter(prefix="/users", tags=["users"])
 
 
 @router.get("/me")
 async def get_me(
-    current_user=Depends(get_current_user),
+    current_user: User = Security(get_current_user, scopes=["me"]),
     uow=Depends(get_uow),
 ) -> APIResponse[CurrentUserProfileResponse]:
     use_case = GetCurrentUserProfile(uow)
@@ -23,8 +28,8 @@ async def get_me(
     if profile is None:
         raise ApplicationError("User not found", status_code=404)
 
-    user, accounts = profile
     return APIResponse(
-        data=CurrentUserProfileResponse.from_entities(user, accounts),
+        success=True,
+        data=CurrentUserProfileResponse.from_profile(profile),
         message="Current user profile",
     )

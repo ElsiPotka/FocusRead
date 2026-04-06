@@ -2,7 +2,9 @@ from __future__ import annotations
 
 from app.application.auth.oauth_callback import HandleOAuthCallback
 from app.domain.account.entities import Account
-from app.domain.auth.value_objects import AccountId, Email, ProviderId, UserId
+from app.domain.auth.value_objects import AccountId, Email, ProviderId
+from app.domain.role.entities import Role
+from app.domain.role.value_objects import RoleName
 from app.domain.user.entities import User
 
 
@@ -24,6 +26,13 @@ def _oauth_tokens() -> dict:
     }
 
 
+def _client_role() -> Role:
+    return Role.create(
+        name=RoleName.CLIENT,
+        description="Default client access",
+    )
+
+
 class TestHandleOAuthCallbackExistingAccount:
     async def test_updates_tokens_for_existing_account(
         self, uow, jwt_service, session_service
@@ -35,6 +44,7 @@ class TestHandleOAuthCallbackExistingAccount:
             account_id=AccountId("google-sub-123"),
             access_token="old_at",
         )
+        uow.roles.list_for_user.return_value = [_client_role()]
         uow.accounts.get_by_provider.return_value = existing_account
         uow.users.get.return_value = user
 
@@ -51,14 +61,21 @@ class TestHandleOAuthCallbackExistingAccount:
         uow.accounts.save.assert_called_once()
         uow.sessions.save.assert_called_once()
         uow.commit.assert_called_once()
+        jwt_service.encode_access_token.assert_called_once_with(
+            str(user.id.value),
+            "private_pem",
+            scopes=["me", "Client"],
+        )
 
 
 class TestHandleOAuthCallbackNewUserNoEmail:
     async def test_creates_new_user_when_no_matching_email(
         self, uow, jwt_service, session_service
     ):
+        client_role = _client_role()
         uow.accounts.get_by_provider.return_value = None
         uow.users.get_by_email.return_value = None
+        uow.roles.get_by_name.return_value = client_role
 
         usecase = HandleOAuthCallback(uow, jwt_service, session_service)
         user, access_token, refresh_token = await usecase.execute(
@@ -70,8 +87,14 @@ class TestHandleOAuthCallbackNewUserNoEmail:
         assert user.name == "John"
         assert user.email_verified is True
         uow.users.save.assert_called_once()
+        uow.roles.assign_to_user.assert_called_once_with(user.id, client_role.id)
         uow.accounts.save.assert_called_once()
         uow.sessions.save.assert_called_once()
+        jwt_service.encode_access_token.assert_called_once_with(
+            str(user.id.value),
+            "private_pem",
+            scopes=["me", "Client"],
+        )
 
 
 class TestHandleOAuthCallbackLinkExistingUser:
@@ -83,6 +106,7 @@ class TestHandleOAuthCallbackLinkExistingUser:
         )
         uow.accounts.get_by_provider.return_value = None
         uow.users.get_by_email.return_value = existing_user
+        uow.roles.list_for_user.return_value = [_client_role()]
 
         usecase = HandleOAuthCallback(uow, jwt_service, session_service)
         user, access_token, refresh_token = await usecase.execute(
@@ -93,4 +117,5 @@ class TestHandleOAuthCallbackLinkExistingUser:
 
         assert user == existing_user
         uow.users.save.assert_not_called()
+        uow.roles.assign_to_user.assert_not_called()
         uow.accounts.save.assert_called_once()

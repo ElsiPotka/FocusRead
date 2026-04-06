@@ -3,9 +3,11 @@ from __future__ import annotations
 from datetime import UTC, datetime, timedelta
 from typing import TYPE_CHECKING
 
+from app.application.auth.scopes import build_access_token_scopes
 from app.domain.auth.entities import Account, Session, User
 from app.domain.auth.errors import EmailAlreadyExistsError
 from app.domain.auth.value_objects import Email, HashedPassword, RefreshTokenHash
+from app.domain.role.value_objects import RoleName
 from app.infrastructure.auth.password import hash_password
 from app.infrastructure.config.settings import settings
 
@@ -68,8 +70,18 @@ class RegisterUser:
         await self._uow.accounts.save(account)
         await self._uow.sessions.save(auth_session)
 
+        client_role = await self._uow.roles.get_by_name(RoleName.CLIENT)
+        if client_role is None:
+            msg = "Default Client role is not configured."
+            raise RuntimeError(msg)
+        await self._uow.roles.assign_to_user(user.id, client_role.id)
+
         private_key, _ = await self._jwt.get_or_create_key_pair(self._uow)
-        access_token = self._jwt.encode_access_token(str(user.id.value), private_key)
+        access_token = self._jwt.encode_access_token(
+            str(user.id.value),
+            private_key,
+            scopes=build_access_token_scopes([client_role]),
+        )
 
         await self._uow.commit()
 

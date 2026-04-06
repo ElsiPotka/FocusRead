@@ -70,10 +70,17 @@ class JWTService:
 
         return (private_pem, public_pem)
 
-    def encode_access_token(self, user_id: str, private_key: str) -> str:
+    def encode_access_token(
+        self,
+        user_id: str,
+        private_key: str,
+        *,
+        scopes: list[str] | None = None,
+    ) -> str:
         now = datetime.now(UTC)
         payload: dict[str, Any] = {
             "sub": user_id,
+            "scope": " ".join(scopes or []),
             "iat": now,
             "exp": now + timedelta(minutes=settings.JWT_ACCESS_TOKEN_EXPIRE_MINUTES),
         }

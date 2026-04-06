@@ -303,13 +303,16 @@ class Settings(BaseSettings):
 
     AUTH_COOKIE_SECURE: bool = Field(
         default=False,
-        description="Set Secure flag on auth cookies",
+        description=(
+            "Force the Secure flag on auth cookies in every environment. "
+            "Production always resolves to secure cookies even when this is false."
+        ),
     )
 
     @computed_field
     @property
     def AUTH_COOKIE_SECURE_RESOLVED(self) -> bool:
-        return self.AUTH_COOKIE_SECURE or self.IS_PRODUCTION
+        return self.AUTH_COOKIE_SECURE or self.ENVIRONMENT == "production"
 
     def _check_default_secret(self, var_name: str, value: str | None) -> None:
         """Raise in non-local envs or warn in local if a secret is still the placeholder."""

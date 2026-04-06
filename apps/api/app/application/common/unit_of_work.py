@@ -13,11 +13,13 @@ if TYPE_CHECKING:
         UserRepository,
     )
     from app.domain.books.repositories import BookRepository
+    from app.domain.role.repositories import RoleRepository
 
 
 class AbstractUnitOfWork(ABC):
     books: BookRepository
     users: UserRepository
+    roles: RoleRepository
     accounts: AccountRepository
     sessions: SessionRepository
     jwt_signing_keys: JWTSigningKeyRepository

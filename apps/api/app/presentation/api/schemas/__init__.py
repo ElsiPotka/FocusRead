@@ -1,3 +1,7 @@
+from app.presentation.api.schemas.admin import (
+    BulkUserRolesRequest,
+    PaginatedAdminUsersResponse,
+)
 from app.presentation.api.schemas.base import (
     BaseORMSchema,
     BaseSchema,
@@ -26,22 +30,28 @@ from app.presentation.api.schemas.response import (
     MessageResponse,
 )
 from app.presentation.api.schemas.users import (
+    AdminUserProfileResponse,
     CurrentUserProfileResponse,
     LinkedAccountResponse,
+    RoleResponse,
+    UserRolesResponse,
 )
 
 __all__ = [
     "APIResponse",
+    "AdminUserProfileResponse",
     "AuditMixin",
     "BaseAPIResponse",
     "BaseORMSchema",
     "BaseSchema",
+    "BulkUserRolesRequest",
     "CurrentUserProfileResponse",
     "ErrorResponse",
     "LinkedAccountResponse",
     "ListResponse",
     "MessageResponse",
     "MetadataMixin",
+    "PaginatedAdminUsersResponse",
     "PaginatedResponse",
     "PaginationMeta",
     "PaginationParams",
@@ -50,6 +60,8 @@ __all__ = [
     "SoftDeleteMixin",
     "TagsMixin",
     "TimestampMixin",
+    "UserRolesResponse",
     "UUIDMixin",
     "VersionMixin",
+    "RoleResponse",
 ]
