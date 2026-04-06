@@ -6,6 +6,8 @@ from sqlalchemy.orm import Mapped, mapped_column
 
 
 class TagsMixin:
+    """Adds a tag array and convenience methods for mutating it."""
+
     tags: Mapped[list[str] | None] = mapped_column(
         ARRAY(String),
         nullable=True,

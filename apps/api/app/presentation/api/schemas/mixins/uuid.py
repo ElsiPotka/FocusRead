@@ -9,4 +9,6 @@ if TYPE_CHECKING:
 
 
 class UUIDMixin(BaseModel):
+    """Exposes the UUID-based identifier on API schemas."""
+
     id: uuid.UUID = Field(..., description="Unique identifier (UUIDv7)")

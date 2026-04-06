@@ -6,6 +6,8 @@ from sqlalchemy.orm import Mapped, mapped_column
 
 
 class SearchMixin:
+    """Adds a PostgreSQL full-text search vector and query helper."""
+
     search_vector: Mapped[str | None] = mapped_column(
         TSVECTOR,
         nullable=True,

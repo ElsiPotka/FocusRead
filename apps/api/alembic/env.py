@@ -20,6 +20,9 @@ from app.infrastructure.config.settings import settings  # noqa: E402
 from app.infrastructure.persistence.models import Base  # noqa: F401, E402
 
 if TYPE_CHECKING:
+    from collections.abc import MutableMapping
+    from typing import Literal
+
     from sqlalchemy.engine import Connection
 
 config = context.config
@@ -30,6 +33,26 @@ if config.config_file_name is not None:
 
 target_metadata = Base.metadata
 
+_EXCLUDED_TABLES: set[str] = {"books"}
+
+
+def include_name(
+    name: str | None,
+    type_: Literal[
+        "schema",
+        "table",
+        "column",
+        "index",
+        "unique_constraint",
+        "foreign_key_constraint",
+    ],
+    parent_names: MutableMapping[
+        Literal["schema_name", "table_name", "schema_qualified_table_name"],
+        str | None,
+    ],
+) -> bool:
+    return not (type_ == "table" and name in _EXCLUDED_TABLES)
+
 
 def run_migrations_offline() -> None:
     context.configure(
@@ -39,6 +62,7 @@ def run_migrations_offline() -> None:
         dialect_opts={"paramstyle": "named"},
         compare_type=True,
         compare_server_default=True,
+        include_name=include_name,
     )
 
     with context.begin_transaction():
@@ -51,6 +75,7 @@ def do_run_migrations(connection: Connection) -> None:
         target_metadata=target_metadata,
         compare_type=True,
         compare_server_default=True,
+        include_name=include_name,
     )
 
     with context.begin_transaction():

@@ -7,8 +7,24 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
 from app.application.common.errors import ApplicationError
+from app.domain.auth.errors import (
+    AuthError,
+    EmailAlreadyExistsError,
+    InactiveUserError,
+    InvalidCredentialsError,
+    InvalidRefreshTokenError,
+    SessionExpiredError,
+)
 from app.infrastructure.config.settings import settings
 from app.infrastructure.logging.logger import log
+
+_AUTH_ERROR_MAP: dict[type[AuthError], tuple[int, str]] = {
+    InvalidCredentialsError: (401, "Invalid email or password"),
+    EmailAlreadyExistsError: (409, "A user with this email already exists"),
+    SessionExpiredError: (401, "Session has expired"),
+    InvalidRefreshTokenError: (401, "Invalid or expired refresh token"),
+    InactiveUserError: (403, "User account is inactive"),
+}
 
 if TYPE_CHECKING:
     from fastapi import FastAPI, Request
@@ -74,7 +90,23 @@ async def _unhandled_error_handler(
     return JSONResponse(status_code=500, content=body)
 
 
+async def _auth_error_handler(
+    _request: Request,
+    exc: AuthError,
+) -> JSONResponse:
+    status_code, message = _AUTH_ERROR_MAP.get(type(exc), (400, str(exc)))
+    log.warning("Auth error: {}", message)
+    return JSONResponse(
+        status_code=status_code,
+        content={"success": False, "message": message},
+    )
+
+
 def register_exception_handlers(app: FastAPI) -> None:
+    app.add_exception_handler(
+        AuthError,
+        cast("ExceptionHandler", _auth_error_handler),
+    )
     app.add_exception_handler(
         ApplicationError,
         cast("ExceptionHandler", _application_error_handler),

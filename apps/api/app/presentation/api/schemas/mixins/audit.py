@@ -9,6 +9,8 @@ if TYPE_CHECKING:
 
 
 class AuditMixin(BaseModel):
+    """Exposes audit user references on API schemas."""
+
     created_by: uuid.UUID | None = Field(
         default=None, description="User who created this record"
     )

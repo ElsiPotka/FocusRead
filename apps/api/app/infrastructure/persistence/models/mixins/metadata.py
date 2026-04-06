@@ -8,6 +8,8 @@ from sqlalchemy.orm.attributes import flag_modified
 
 
 class MetadataMixin:
+    """Adds mutable JSON metadata helpers to a persistence model."""
+
     entity_metadata: Mapped[dict[str, Any] | None] = mapped_column(
         JSONB,
         nullable=True,

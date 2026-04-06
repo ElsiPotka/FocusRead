@@ -25,6 +25,10 @@ from app.presentation.api.schemas.response import (
     ListResponse,
     MessageResponse,
 )
+from app.presentation.api.schemas.users import (
+    CurrentUserProfileResponse,
+    LinkedAccountResponse,
+)
 
 __all__ = [
     "APIResponse",
@@ -32,7 +36,9 @@ __all__ = [
     "BaseAPIResponse",
     "BaseORMSchema",
     "BaseSchema",
+    "CurrentUserProfileResponse",
     "ErrorResponse",
+    "LinkedAccountResponse",
     "ListResponse",
     "MessageResponse",
     "MetadataMixin",

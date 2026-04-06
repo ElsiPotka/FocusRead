@@ -6,11 +6,21 @@ from typing import TYPE_CHECKING, Self
 from app.infrastructure.logging.logger import log
 
 if TYPE_CHECKING:
+    from app.domain.auth.repositories import (
+        AccountRepository,
+        JWTSigningKeyRepository,
+        SessionRepository,
+        UserRepository,
+    )
     from app.domain.books.repositories import BookRepository
 
 
 class AbstractUnitOfWork(ABC):
     books: BookRepository
+    users: UserRepository
+    accounts: AccountRepository
+    sessions: SessionRepository
+    jwt_signing_keys: JWTSigningKeyRepository
 
     async def __aenter__(self) -> Self:
         return self

@@ -6,6 +6,8 @@ SLUG_RE = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
 
 
 class SlugMixin(BaseModel):
+    """Exposes and validates a URL-friendly slug field."""
+
     slug: str | None = Field(
         default=None,
         description="URL-friendly identifier",

@@ -5,6 +5,8 @@ from sqlalchemy.orm import Mapped, mapped_column
 
 
 class AuditMixin:
+    """Tracks which user created, updated, or deleted a record."""
+
     created_by: Mapped[uuid.UUID | None] = mapped_column(
         ForeignKey("users.id", ondelete="SET NULL"),
         nullable=True,

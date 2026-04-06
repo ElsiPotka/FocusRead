@@ -9,5 +9,7 @@ if TYPE_CHECKING:
 
 
 class TimestampMixin(BaseModel):
+    """Exposes creation and update timestamps on API schemas."""
+
     created_at: datetime = Field(..., description="Record creation timestamp")
     updated_at: datetime = Field(..., description="Record last update timestamp")

@@ -261,16 +261,6 @@ class Settings(BaseSettings):
         description="Hard time limit for Celery tasks in seconds (30 minutes)",
     )
 
-    JWT_SECRET_KEY: str = Field(
-        default="change_me",
-        description="Secret key for signing JWT access tokens",
-    )
-
-    JWT_ALGORITHM: str = Field(
-        default="HS256",
-        description="JWT signing algorithm",
-    )
-
     JWT_ACCESS_TOKEN_EXPIRE_MINUTES: int = Field(
         default=15,
         description="Access token expiration time in minutes",
@@ -280,6 +270,46 @@ class Settings(BaseSettings):
         default=7,
         description="Refresh token expiration time in days",
     )
+
+    JWT_KEY_PAIR_CACHE_TTL_SECONDS: int = Field(
+        default=86400,
+        description="TTL for cached RSA key pair in Redis (24 hours)",
+    )
+
+    GOOGLE_CLIENT_ID: str = Field(
+        default="",
+        description="Google OAuth2 client ID",
+    )
+
+    GOOGLE_CLIENT_SECRET: str = Field(
+        default="",
+        description="Google OAuth2 client secret",
+    )
+
+    APPLE_CLIENT_ID: str = Field(
+        default="",
+        description="Apple OAuth2 client ID (Services ID)",
+    )
+
+    APPLE_CLIENT_SECRET: str = Field(
+        default="",
+        description="Apple OAuth2 client secret",
+    )
+
+    FRONTEND_URL: str = Field(
+        default="http://localhost:3000",
+        description="Frontend URL for OAuth redirects",
+    )
+
+    AUTH_COOKIE_SECURE: bool = Field(
+        default=False,
+        description="Set Secure flag on auth cookies",
+    )
+
+    @computed_field
+    @property
+    def AUTH_COOKIE_SECURE_RESOLVED(self) -> bool:
+        return self.AUTH_COOKIE_SECURE or self.IS_PRODUCTION
 
     def _check_default_secret(self, var_name: str, value: str | None) -> None:
         """Raise in non-local envs or warn in local if a secret is still the placeholder."""
@@ -295,7 +325,6 @@ class Settings(BaseSettings):
 
     @model_validator(mode="after")
     def _enforce_non_default_secrets(self) -> Self:
-        self._check_default_secret("JWT_SECRET_KEY", self.JWT_SECRET_KEY)
         self._check_default_secret("POSTGRES_PASSWORD", self.POSTGRES_PASSWORD)
         return self
 

@@ -5,6 +5,8 @@ from sqlalchemy.orm import Mapped, mapped_column
 
 
 class SlugMixin:
+    """Adds a unique slug column and normalized slug generator."""
+
     slug: Mapped[str | None] = mapped_column(
         String(255),
         unique=True,

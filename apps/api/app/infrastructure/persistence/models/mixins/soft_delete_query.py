@@ -13,6 +13,8 @@ if TYPE_CHECKING:
 
 
 class SoftDeleteQueryMixin:
+    """Adds query helpers for including, restoring, and deleting trashed rows."""
+
     if TYPE_CHECKING:
         id: Mapped[UUID]
         deleted_at: Mapped[datetime | None]

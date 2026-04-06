@@ -9,6 +9,8 @@ if TYPE_CHECKING:
 
 
 class SoftDeleteMixin(BaseModel):
+    """Exposes soft-delete timestamps and derived flags on API schemas."""
+
     deleted_at: datetime | None = Field(
         default=None, description="Soft delete timestamp"
     )
