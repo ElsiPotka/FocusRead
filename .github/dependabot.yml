@@ -1,0 +1,7 @@
+version: 2
+updates:
+  - package-ecosystem: "uv"
+    directory: "/apps/api"
+    target-branch: "main"
+    schedule:
+      interval: "weekly"
