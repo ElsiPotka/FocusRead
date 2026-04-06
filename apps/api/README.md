@@ -9,6 +9,13 @@ uv sync --dev
 uv run fastapi dev app/core/main.py
 ```
 
+## Redis And Celery
+
+```bash
+uv run celery -A app.workers.broker.celery_app worker --loglevel=info
+uv run celery -A app.workers.broker.celery_app beat --loglevel=info
+```
+
 ## Migrations
 
 ```bash

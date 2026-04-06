@@ -16,9 +16,8 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-from app.config.settings import settings  # noqa: E402
-from app.core import domain_models as _domain_models  # noqa: F401,E402
-from app.shared.models.base import Base  # noqa: E402
+from app.infrastructure.config.settings import settings  # noqa: E402
+from app.infrastructure.persistence.models import Base  # noqa: F401, E402
 
 if TYPE_CHECKING:
     from sqlalchemy.engine import Connection

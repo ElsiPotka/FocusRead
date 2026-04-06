@@ -3,7 +3,7 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, Self
 
-from app.config.logger import log
+from app.infrastructure.logging.logger import log
 
 if TYPE_CHECKING:
     from app.domain.books.repositories import BookRepository

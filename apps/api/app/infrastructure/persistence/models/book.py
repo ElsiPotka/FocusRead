@@ -3,7 +3,7 @@ from __future__ import annotations
 from sqlalchemy import String, text
 from sqlalchemy.orm import Mapped, mapped_column
 
-from app.shared.models.base_model import BaseModel
+from app.infrastructure.persistence.models.base_model import BaseModel
 
 
 class BookModel(BaseModel):

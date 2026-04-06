@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING
 from fastapi import Depends
 
 from app.application.common.unit_of_work import AbstractUnitOfWork
-from app.config.db import get_db
+from app.infrastructure.persistence.db import get_db
 from app.infrastructure.persistence.repositories.book_repository import (
     SqlAlchemyBookRepository,
 )
