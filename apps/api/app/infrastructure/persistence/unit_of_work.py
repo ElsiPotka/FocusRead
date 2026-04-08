@@ -9,6 +9,9 @@ from app.infrastructure.persistence.db import get_db
 from app.infrastructure.persistence.repositories.account_repository import (
     SqlAlchemyAccountRepository,
 )
+from app.infrastructure.persistence.repositories.book_chunk_repository import (
+    SqlAlchemyBookChunkRepository,
+)
 from app.infrastructure.persistence.repositories.book_repository import (
     SqlAlchemyBookRepository,
 )
@@ -35,6 +38,7 @@ class SqlAlchemyUnitOfWork(AbstractUnitOfWork):
     def __init__(self, session: AsyncSession) -> None:
         self.session = session
         self.books = SqlAlchemyBookRepository(session)
+        self.book_chunks = SqlAlchemyBookChunkRepository(session)
         self.users = SqlAlchemyUserRepository(session)
         self.roles = SqlAlchemyRoleRepository(session)
         self.accounts = SqlAlchemyAccountRepository(session)

@@ -17,5 +17,9 @@ def book_chunk_key(book_id: str, chunk_index: int) -> str:
     return build_cache_key("book", book_id, "chunk", chunk_index)
 
 
+def book_processing_channel(book_id: str) -> str:
+    return build_cache_key("book", book_id, "processing")
+
+
 def reading_session_key(user_id: str, book_id: str) -> str:
     return build_cache_key("reading-session", user_id, book_id)
