@@ -1,0 +1,2 @@
+class ReadingSessionError(Exception):
+    pass

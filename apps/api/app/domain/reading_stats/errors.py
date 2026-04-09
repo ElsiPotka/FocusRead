@@ -1,0 +1,2 @@
+class ReadingStatError(Exception):
+    pass
