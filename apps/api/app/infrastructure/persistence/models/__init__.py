@@ -8,6 +8,7 @@ from app.infrastructure.persistence.models.contributor import (
     ContributorModel,
 )
 from app.infrastructure.persistence.models.jwt_signing_key import JWTSigningKeyModel
+from app.infrastructure.persistence.models.label import BookLabelModel, LabelModel
 from app.infrastructure.persistence.models.reading_session import ReadingSessionModel
 from app.infrastructure.persistence.models.reading_stat import ReadingStatModel
 from app.infrastructure.persistence.models.role import RoleModel
@@ -24,7 +25,9 @@ __all__ = [
     "BookContributorModel",
     "BookModel",
     "ContributorModel",
+    "BookLabelModel",
     "JWTSigningKeyModel",
+    "LabelModel",
     "NAMING_CONVENTION",
     "ReadingSessionModel",
     "ReadingStatModel",
