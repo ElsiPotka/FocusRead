@@ -14,6 +14,7 @@ if TYPE_CHECKING:
     )
     from app.domain.book_chunks.repositories import BookChunkRepository
     from app.domain.books.repositories import BookRepository
+    from app.domain.contributor.repositories import ContributorRepository
     from app.domain.reading_sessions.repositories import ReadingSessionRepository
     from app.domain.reading_stats.repositories import ReadingStatRepository
     from app.domain.role.repositories import RoleRepository
@@ -23,6 +24,7 @@ if TYPE_CHECKING:
 class AbstractUnitOfWork(ABC):
     books: BookRepository
     book_chunks: BookChunkRepository
+    contributors: ContributorRepository
     reading_sessions: ReadingSessionRepository
     reading_stats: ReadingStatRepository
     user_book_states: UserBookStateRepository

@@ -15,6 +15,9 @@ from app.infrastructure.persistence.repositories.book_chunk_repository import (
 from app.infrastructure.persistence.repositories.book_repository import (
     SqlAlchemyBookRepository,
 )
+from app.infrastructure.persistence.repositories.contributor_repository import (
+    SqlAlchemyContributorRepository,
+)
 from app.infrastructure.persistence.repositories.jwt_signing_key_repository import (
     SqlAlchemyJWTSigningKeyRepository,
 )
@@ -48,6 +51,7 @@ class SqlAlchemyUnitOfWork(AbstractUnitOfWork):
         self.session = session
         self.books = SqlAlchemyBookRepository(session)
         self.book_chunks = SqlAlchemyBookChunkRepository(session)
+        self.contributors = SqlAlchemyContributorRepository(session)
         self.reading_sessions = SqlAlchemyReadingSessionRepository(session)
         self.reading_stats = SqlAlchemyReadingStatRepository(session)
         self.user_book_states = SqlAlchemyUserBookStateRepository(session)
