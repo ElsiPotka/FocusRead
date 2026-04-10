@@ -12,6 +12,7 @@ from app.infrastructure.persistence.models.reading_session import ReadingSession
 from app.infrastructure.persistence.models.reading_stat import ReadingStatModel
 from app.infrastructure.persistence.models.role import RoleModel
 from app.infrastructure.persistence.models.session import SessionModel
+from app.infrastructure.persistence.models.shelf import ShelfBookModel, ShelfModel
 from app.infrastructure.persistence.models.user import UserModel
 from app.infrastructure.persistence.models.user_book_state import UserBookStateModel
 
@@ -29,6 +30,8 @@ __all__ = [
     "ReadingStatModel",
     "RoleModel",
     "SessionModel",
+    "ShelfBookModel",
+    "ShelfModel",
     "UserBookStateModel",
     "UserModel",
 ]
