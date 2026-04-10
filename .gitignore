@@ -57,8 +57,12 @@ env/
 # FastAPI / Celery / local storage
 celerybeat-schedule
 uploads/
-storage/
 tmp/
+apps/api/app/storage/**
+!apps/api/app/storage/
+!apps/api/app/storage/**/
+!apps/api/app/storage/.gitkeep
+!apps/api/app/storage/**/.gitkeep
 
 # Expo / React Native
 .expo/
