@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from sqlalchemy import delete, select
+from sqlalchemy import delete, or_, select
 
 from app.domain.auth.value_objects import UserId
 from app.domain.books.value_objects import BookId  # noqa: TC001
@@ -76,7 +76,32 @@ class SqlAlchemyLabelRepository(LabelRepository):
     async def list_for_user(self, *, user_id: UserId) -> list[Label]:
         stmt = (
             select(LabelModel)
-            .where(LabelModel.owner_user_id == user_id.value)
+            .where(
+                or_(
+                    LabelModel.owner_user_id == user_id.value,
+                    LabelModel.is_system.is_(True),
+                ),
+            )
+            .order_by(LabelModel.is_system.desc(), LabelModel.name)
+        )
+        result = await self.session.execute(stmt)
+        return [self._to_entity(m) for m in result.scalars().all()]
+
+    async def get_system(self, *, label_id: LabelId) -> Label | None:
+        stmt = select(LabelModel).where(
+            LabelModel.id == label_id.value,
+            LabelModel.is_system.is_(True),
+        )
+        result = await self.session.execute(stmt)
+        model = result.scalar_one_or_none()
+        if model is None:
+            return None
+        return self._to_entity(model)
+
+    async def list_system(self) -> list[Label]:
+        stmt = (
+            select(LabelModel)
+            .where(LabelModel.is_system.is_(True))
             .order_by(LabelModel.name)
         )
         result = await self.session.execute(stmt)

@@ -6,6 +6,7 @@ import pytest
 
 from app.application.common.unit_of_work import AbstractUnitOfWork
 from app.domain.auth.repositories import UserRepository
+from app.domain.label.repositories import LabelRepository
 from app.domain.role.repositories import RoleRepository
 
 
@@ -20,8 +21,14 @@ def role_repo():
 
 
 @pytest.fixture
-def uow(user_repo, role_repo):
+def label_repo():
+    return AsyncMock(spec=LabelRepository)
+
+
+@pytest.fixture
+def uow(user_repo, role_repo, label_repo):
     mock = AsyncMock(spec=AbstractUnitOfWork)
     mock.users = user_repo
     mock.roles = role_repo
+    mock.labels = label_repo
     return mock
