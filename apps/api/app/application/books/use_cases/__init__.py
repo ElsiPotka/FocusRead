@@ -1,6 +1,7 @@
 from app.application.books.use_cases.delete_book import DeleteBook
 from app.application.books.use_cases.get_book import GetBook
 from app.application.books.use_cases.get_book_chunk import GetBookChunk
+from app.application.books.use_cases.get_book_toc import GetBookTOC
 from app.application.books.use_cases.list_books import ListBooks
 from app.application.books.use_cases.register_book_upload import RegisterBookUpload
 from app.application.books.use_cases.resolve_book_chunk import ResolveBookChunk
@@ -11,6 +12,7 @@ __all__ = [
     "DeleteBook",
     "GetBook",
     "GetBookChunk",
+    "GetBookTOC",
     "ListBooks",
     "RegisterBookUpload",
     "ResolveBookChunk",

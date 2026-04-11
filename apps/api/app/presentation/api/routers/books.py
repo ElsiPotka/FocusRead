@@ -11,6 +11,7 @@ from app.application.books.use_cases import (
     DeleteBook,
     GetBook,
     GetBookChunk,
+    GetBookTOC,
     ListBooks,
     ResolveBookChunk,
     UpdateBookMetadata,
@@ -33,6 +34,7 @@ from app.infrastructure.cache.redis import get_cache, get_redis
 from app.infrastructure.persistence.unit_of_work import get_uow
 from app.infrastructure.storage.file_storage import FileStorage, get_file_storage
 from app.presentation.api.middleware.auth import get_current_user
+from app.presentation.api.schemas.book_toc import BookTOCEntryResponse
 from app.presentation.api.schemas.books import (
     BookChunkResponse,
     BookResponse,
@@ -431,3 +433,23 @@ async def delete_book(
         owner_user_id=current_user.id.value,
     )
     return MessageResponse(success=True, message="Book deleted")
+
+
+@router.get("/{book_id}/toc")
+async def get_book_toc(
+    book_id: UUID,
+    current_user: User = Security(get_current_user, scopes=["me"]),
+    uow=Depends(get_uow),
+) -> ListResponse[BookTOCEntryResponse]:
+    use_case = GetBookTOC(uow)
+    entries = await use_case.execute(
+        book_id=book_id,
+        owner_user_id=current_user.id.value,
+    )
+    data = [BookTOCEntryResponse.from_entity(e) for e in entries]
+    return ListResponse(
+        success=True,
+        data=data,
+        count=len(data),
+        message="Table of contents retrieved",
+    )

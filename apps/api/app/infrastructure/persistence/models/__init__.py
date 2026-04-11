@@ -3,6 +3,8 @@ from app.infrastructure.persistence.models.base import NAMING_CONVENTION, Base
 from app.infrastructure.persistence.models.base_model import BaseModel
 from app.infrastructure.persistence.models.book import BookModel
 from app.infrastructure.persistence.models.book_chunk import BookChunkModel
+from app.infrastructure.persistence.models.book_toc_entry import BookTOCEntryModel
+from app.infrastructure.persistence.models.bookmark import BookmarkModel
 from app.infrastructure.persistence.models.contributor import (
     BookContributorModel,
     ContributorModel,
@@ -24,6 +26,8 @@ __all__ = [
     "BookChunkModel",
     "BookContributorModel",
     "BookModel",
+    "BookTOCEntryModel",
+    "BookmarkModel",
     "ContributorModel",
     "BookLabelModel",
     "JWTSigningKeyModel",

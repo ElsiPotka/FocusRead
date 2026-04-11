@@ -10,6 +10,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 import sqlalchemy as sa
+from sqlalchemy.dialects import postgresql
 
 from alembic import op
 
@@ -21,22 +22,30 @@ down_revision: str | None = "0005"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
-role_name_enum = sa.Enum(
-    "Admin",
-    "Merchant",
-    "Client",
-    name="role_name_enum",
-)
-
-
 def upgrade() -> None:
-    bind = op.get_bind()
-    role_name_enum.create(bind, checkfirst=True)
+    op.execute(
+        sa.text(
+            "DO $$ BEGIN "
+            "CREATE TYPE role_name_enum AS ENUM ('Admin', 'Merchant', 'Client'); "
+            "EXCEPTION WHEN duplicate_object THEN NULL; "
+            "END $$"
+        )
+    )
 
     op.create_table(
         "roles",
         sa.Column("id", sa.UUID(), server_default=sa.text("uuidv7()"), nullable=False),
-        sa.Column("name", role_name_enum, nullable=False),
+        sa.Column(
+            "name",
+            postgresql.ENUM(
+                "Admin",
+                "Merchant",
+                "Client",
+                name="role_name_enum",
+                create_type=False,
+            ),
+            nullable=False,
+        ),
         sa.Column("description", sa.String(length=255), nullable=False),
         sa.Column(
             "created_at",
@@ -100,8 +109,6 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    bind = op.get_bind()
-
     op.drop_table("user_roles")
     op.drop_table("roles")
-    role_name_enum.drop(bind, checkfirst=True)
+    op.execute(sa.text("DROP TYPE IF EXISTS role_name_enum"))

@@ -13,6 +13,8 @@ if TYPE_CHECKING:
         UserRepository,
     )
     from app.domain.book_chunks.repositories import BookChunkRepository
+    from app.domain.book_toc_entry.repositories import BookTOCEntryRepository
+    from app.domain.bookmark.repositories import BookmarkRepository
     from app.domain.books.repositories import BookRepository
     from app.domain.contributor.repositories import ContributorRepository
     from app.domain.label.repositories import LabelRepository
@@ -26,6 +28,8 @@ if TYPE_CHECKING:
 class AbstractUnitOfWork(ABC):
     books: BookRepository
     book_chunks: BookChunkRepository
+    book_toc_entries: BookTOCEntryRepository
+    bookmarks: BookmarkRepository
     contributors: ContributorRepository
     labels: LabelRepository
     reading_sessions: ReadingSessionRepository

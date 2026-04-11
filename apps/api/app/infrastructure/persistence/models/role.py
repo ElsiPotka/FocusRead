@@ -40,6 +40,7 @@ class RoleModel(BaseModel):
             RoleName,
             name="role_name_enum",
             values_callable=lambda enum_cls: [item.value for item in enum_cls],
+            create_type=False,
         ),
         nullable=False,
         unique=True,

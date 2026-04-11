@@ -15,6 +15,12 @@ from app.infrastructure.persistence.repositories.book_chunk_repository import (
 from app.infrastructure.persistence.repositories.book_repository import (
     SqlAlchemyBookRepository,
 )
+from app.infrastructure.persistence.repositories.book_toc_entry_repository import (
+    SqlAlchemyBookTOCEntryRepository,
+)
+from app.infrastructure.persistence.repositories.bookmark_repository import (
+    SqlAlchemyBookmarkRepository,
+)
 from app.infrastructure.persistence.repositories.contributor_repository import (
     SqlAlchemyContributorRepository,
 )
@@ -57,6 +63,8 @@ class SqlAlchemyUnitOfWork(AbstractUnitOfWork):
         self.session = session
         self.books = SqlAlchemyBookRepository(session)
         self.book_chunks = SqlAlchemyBookChunkRepository(session)
+        self.book_toc_entries = SqlAlchemyBookTOCEntryRepository(session)
+        self.bookmarks = SqlAlchemyBookmarkRepository(session)
         self.contributors = SqlAlchemyContributorRepository(session)
         self.labels = SqlAlchemyLabelRepository(session)
         self.reading_sessions = SqlAlchemyReadingSessionRepository(session)
