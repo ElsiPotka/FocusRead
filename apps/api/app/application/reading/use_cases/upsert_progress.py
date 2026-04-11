@@ -16,7 +16,7 @@ from app.domain.reading_sessions.value_objects import (
 )
 from app.domain.reading_stats.entities import ReadingStat
 from app.domain.reading_stats.value_objects import SessionDate
-from app.infrastructure.cache.keys import reading_session_key
+from app.infrastructure.cache.keys import book_ownership_key, reading_session_key
 
 if TYPE_CHECKING:
     from uuid import UUID
@@ -25,6 +25,7 @@ if TYPE_CHECKING:
     from app.infrastructure.cache.redis_cache import RedisCache
 
 SESSION_CACHE_TTL_SECONDS = 600  # 10 minutes
+OWNERSHIP_CACHE_TTL_SECONDS = 300  # 5 minutes
 
 
 @dataclass(frozen=True, slots=True)
@@ -49,12 +50,21 @@ class UpsertProgress:
         user_id: UUID,
         update: ProgressUpdate,
     ) -> ReadingSession:
-        book = await self._uow.books.get_for_owner(
-            book_id=BookId(book_id),
-            owner_user_id=UserId(user_id),
-        )
-        if book is None:
-            raise NotFoundError("Book not found")
+        # Cached book ownership check — avoids 1 DB query on warm path
+        ownership_key = book_ownership_key(str(user_id), str(book_id))
+        owns_book = await self._cache.get_json(ownership_key)
+        if not owns_book:
+            book = await self._uow.books.get_for_owner(
+                book_id=BookId(book_id),
+                owner_user_id=UserId(user_id),
+            )
+            if book is None:
+                raise NotFoundError("Book not found")
+            await self._cache.set_json(
+                ownership_key,
+                True,
+                ttl_seconds=OWNERSHIP_CACHE_TTL_SECONDS,
+            )
 
         session = await self._uow.reading_sessions.get(
             user_id=UserId(user_id),

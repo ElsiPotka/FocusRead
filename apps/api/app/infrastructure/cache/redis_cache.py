@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 import gzip
-import json
 from typing import TYPE_CHECKING, Any
+
+import orjson
 
 from app.infrastructure.config.settings import settings
 
@@ -43,7 +44,7 @@ class RedisCache:
         if payload.startswith(COMPRESSED_PAYLOAD_PREFIX):
             payload = gzip.decompress(payload.removeprefix(COMPRESSED_PAYLOAD_PREFIX))
 
-        return json.loads(payload.decode("utf-8"))
+        return orjson.loads(payload)
 
     async def set_json(
         self,
@@ -53,11 +54,7 @@ class RedisCache:
         ttl_seconds: int | None = None,
         compress: bool = False,
     ) -> None:
-        payload = json.dumps(
-            value,
-            ensure_ascii=False,
-            separators=(",", ":"),
-        ).encode("utf-8")
+        payload = orjson.dumps(value)
         if compress:
             payload = COMPRESSED_PAYLOAD_PREFIX + gzip.compress(payload)
 

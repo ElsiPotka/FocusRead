@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from sqlalchemy import delete, select, update
+from sqlalchemy import case, delete, select, update
 
 from app.domain.auth.value_objects import UserId
 from app.domain.books.value_objects import BookId  # noqa: TC001
@@ -117,13 +117,20 @@ class SqlAlchemyShelfRepository(ShelfRepository):
     async def reorder_shelves(
         self, *, ordering: list[tuple[ShelfId, int]]
     ) -> None:
-        for shelf_id, sort_order in ordering:
-            stmt = (
-                update(ShelfModel)
-                .where(ShelfModel.id == shelf_id.value)
-                .values(sort_order=sort_order)
+        if not ordering:
+            return
+        ids = [sid.value for sid, _ in ordering]
+        stmt = (
+            update(ShelfModel)
+            .where(ShelfModel.id.in_(ids))
+            .values(
+                sort_order=case(
+                    {sid.value: so for sid, so in ordering},
+                    value=ShelfModel.id,
+                )
             )
-            await self.session.execute(stmt)
+        )
+        await self.session.execute(stmt)
 
     async def reorder_books(
         self,
@@ -131,16 +138,23 @@ class SqlAlchemyShelfRepository(ShelfRepository):
         shelf_id: ShelfId,
         ordering: list[tuple[BookId, int]],
     ) -> None:
-        for book_id, sort_order in ordering:
-            stmt = (
-                update(ShelfBookModel)
-                .where(
-                    ShelfBookModel.shelf_id == shelf_id.value,
-                    ShelfBookModel.book_id == book_id.value,
-                )
-                .values(sort_order=sort_order)
+        if not ordering:
+            return
+        book_ids = [bid.value for bid, _ in ordering]
+        stmt = (
+            update(ShelfBookModel)
+            .where(
+                ShelfBookModel.shelf_id == shelf_id.value,
+                ShelfBookModel.book_id.in_(book_ids),
             )
-            await self.session.execute(stmt)
+            .values(
+                sort_order=case(
+                    {bid.value: so for bid, so in ordering},
+                    value=ShelfBookModel.book_id,
+                )
+            )
+        )
+        await self.session.execute(stmt)
 
     @staticmethod
     def _to_entity(model: ShelfModel) -> Shelf:

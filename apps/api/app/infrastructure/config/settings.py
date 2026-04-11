@@ -147,6 +147,16 @@ class Settings(BaseSettings):
         description="Echo SQL statements to log (never in production)",
     )
 
+    DB_POOL_SIZE: int = Field(
+        default=5,
+        description="Number of persistent connections in the SQLAlchemy pool",
+    )
+
+    DB_MAX_OVERFLOW: int = Field(
+        default=10,
+        description="Max additional connections beyond pool_size under load",
+    )
+
     POSTGRES_SERVER: str = Field(
         default="127.0.0.1",
         description="PostgreSQL server hostname or IP address",

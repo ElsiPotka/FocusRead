@@ -23,3 +23,7 @@ def book_processing_channel(book_id: str) -> str:
 
 def reading_session_key(user_id: str, book_id: str) -> str:
     return build_cache_key("reading-session", user_id, book_id)
+
+
+def book_ownership_key(user_id: str, book_id: str) -> str:
+    return build_cache_key("book-ownership", user_id, book_id)

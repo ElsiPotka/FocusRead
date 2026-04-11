@@ -137,6 +137,7 @@ async def test_updates_cache_after_save(
 
 
 async def test_book_not_found_raises(uow, book_repo, cache):
+    cache.get_json.return_value = None
     book_repo.get_for_owner.return_value = None
 
     with pytest.raises(NotFoundError, match="Book not found"):

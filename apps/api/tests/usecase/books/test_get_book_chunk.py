@@ -8,6 +8,7 @@ import pytest
 from app.application.books.use_cases.get_book_chunk import (
     CHUNK_CACHE_TTL_SECONDS,
     GetBookChunk,
+    _to_cache,
 )
 from app.application.common.errors import NotFoundError
 from app.application.common.unit_of_work import AbstractUnitOfWork
@@ -96,8 +97,7 @@ async def test_get_chunk_cache_hit_refreshes_ttl(
     uow, book_repo, chunk_repo, cache, book, chunk
 ):
     book_repo.get_for_owner.return_value = book
-    cache.get_json.return_value = [["w", "hello", 1.0]]
-    chunk_repo.get_by_index.return_value = chunk
+    cache.get_json.return_value = _to_cache(chunk)
 
     result = await GetBookChunk(uow, cache).execute(
         book_id=book.id.value,
@@ -105,7 +105,9 @@ async def test_get_chunk_cache_hit_refreshes_ttl(
         owner_user_id=book.owner_user_id.value,
     )
 
-    assert result == chunk
+    assert result.id.value == chunk.id.value
+    assert result.word_data.value == chunk.word_data.value
+    chunk_repo.get_by_index.assert_not_awaited()
     cache.touch.assert_awaited_once()
     cache.set_json.assert_not_awaited()
 

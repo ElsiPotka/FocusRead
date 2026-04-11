@@ -423,8 +423,9 @@ async def delete_book(
     book_id: UUID,
     current_user: User = Security(get_current_user, scopes=["me"]),
     uow=Depends(get_uow),
+    cache: RedisCache = Depends(get_cache),
 ) -> MessageResponse:
-    use_case = DeleteBook(uow)
+    use_case = DeleteBook(uow, cache)
     await use_case.execute(
         book_id=book_id,
         owner_user_id=current_user.id.value,
