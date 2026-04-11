@@ -14,6 +14,7 @@ from app.application.books.use_cases import (
     GetBookTOC,
     ListBooks,
     ResolveBookChunk,
+    SearchBooks,
     UpdateBookMetadata,
     UploadBook,
 )
@@ -28,6 +29,7 @@ from app.application.user_book_state import (
 )
 from app.domain.auth.value_objects import UserId
 from app.domain.books.entities import BookStatus
+from app.domain.books.filter import BookFilter, BookSortField, SortDirection
 from app.domain.books.value_objects import BookId
 from app.infrastructure.cache.keys import book_processing_channel
 from app.infrastructure.cache.redis import get_cache, get_redis
@@ -379,6 +381,123 @@ async def list_books(
         data=[BookResponse.from_entity(book) for book in books],
         count=len(books),
         message="Books retrieved",
+    )
+
+
+@router.get("/search")
+async def search_books(
+    q: str | None = Query(None, min_length=1, max_length=500),
+    document_type: str | None = Query(None),
+    status: str | None = Query(None),
+    favorited: bool | None = Query(None),
+    archived: bool | None = Query(None),
+    completed: bool | None = Query(None),
+    sort_by: BookSortField = Query(BookSortField.CREATED_AT),
+    sort_dir: SortDirection = Query(SortDirection.DESC),
+    current_user: User = Security(get_current_user, scopes=["me"]),
+    uow=Depends(get_uow),
+) -> ListResponse[BookResponse]:
+    book_filter = BookFilter(
+        owner_user_id=UserId(current_user.id.value),
+        query=q,
+        document_type=document_type,
+        status=status,
+        favorited=favorited,
+        archived=archived,
+        completed=completed,
+        sort_by=sort_by,
+        sort_dir=sort_dir,
+    )
+    use_case = SearchBooks(uow)
+    books = await use_case.execute(book_filter=book_filter)
+    data = [BookResponse.from_entity(b) for b in books]
+    return ListResponse(
+        success=True,
+        data=data,
+        count=len(data),
+        message="Search results",
+    )
+
+
+@router.get("/views/continue-reading")
+async def continue_reading(
+    current_user: User = Security(get_current_user, scopes=["me"]),
+    uow=Depends(get_uow),
+) -> ListResponse[BookResponse]:
+    book_filter = BookFilter(
+        owner_user_id=UserId(current_user.id.value),
+        continue_reading=True,
+        sort_by=BookSortField.LAST_OPENED_AT,
+        sort_dir=SortDirection.DESC,
+    )
+    use_case = SearchBooks(uow)
+    books = await use_case.execute(book_filter=book_filter)
+    data = [BookResponse.from_entity(b) for b in books]
+    return ListResponse(
+        success=True,
+        data=data,
+        count=len(data),
+        message="Continue reading",
+    )
+
+
+@router.get("/views/favorites")
+async def favorite_books(
+    current_user: User = Security(get_current_user, scopes=["me"]),
+    uow=Depends(get_uow),
+) -> ListResponse[BookResponse]:
+    book_filter = BookFilter(
+        owner_user_id=UserId(current_user.id.value),
+        favorited=True,
+    )
+    use_case = SearchBooks(uow)
+    books = await use_case.execute(book_filter=book_filter)
+    data = [BookResponse.from_entity(b) for b in books]
+    return ListResponse(
+        success=True,
+        data=data,
+        count=len(data),
+        message="Favorite books",
+    )
+
+
+@router.get("/views/archived")
+async def archived_books(
+    current_user: User = Security(get_current_user, scopes=["me"]),
+    uow=Depends(get_uow),
+) -> ListResponse[BookResponse]:
+    book_filter = BookFilter(
+        owner_user_id=UserId(current_user.id.value),
+        archived=True,
+    )
+    use_case = SearchBooks(uow)
+    books = await use_case.execute(book_filter=book_filter)
+    data = [BookResponse.from_entity(b) for b in books]
+    return ListResponse(
+        success=True,
+        data=data,
+        count=len(data),
+        message="Archived books",
+    )
+
+
+@router.get("/views/finished")
+async def finished_books(
+    current_user: User = Security(get_current_user, scopes=["me"]),
+    uow=Depends(get_uow),
+) -> ListResponse[BookResponse]:
+    book_filter = BookFilter(
+        owner_user_id=UserId(current_user.id.value),
+        completed=True,
+    )
+    use_case = SearchBooks(uow)
+    books = await use_case.execute(book_filter=book_filter)
+    data = [BookResponse.from_entity(b) for b in books]
+    return ListResponse(
+        success=True,
+        data=data,
+        count=len(data),
+        message="Finished books",
     )
 
 

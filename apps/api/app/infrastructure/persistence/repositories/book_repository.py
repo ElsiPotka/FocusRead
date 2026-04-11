@@ -2,10 +2,11 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from sqlalchemy import select
+from sqlalchemy import and_, exists, func, literal, or_, select
 
 from app.domain.auth.value_objects import UserId
 from app.domain.books.entities import Book, BookStatus
+from app.domain.books.filter import BookFilter, BookSortField, SortDirection
 from app.domain.books.repositories import BookRepository
 from app.domain.books.value_objects import (
     BookCoverImagePath,
@@ -25,6 +26,13 @@ from app.domain.books.value_objects import (
     BookWordCount,
 )
 from app.infrastructure.persistence.models.book import BookModel
+from app.infrastructure.persistence.models.contributor import (
+    BookContributorModel,
+    ContributorModel,
+)
+from app.infrastructure.persistence.models.label import BookLabelModel, LabelModel
+from app.infrastructure.persistence.models.shelf import ShelfBookModel, ShelfModel
+from app.infrastructure.persistence.models.user_book_state import UserBookStateModel
 
 if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession
@@ -125,6 +133,129 @@ class SqlAlchemyBookRepository(BookRepository):
             .where(BookModel.owner_user_id == owner_user_id.value)
             .order_by(BookModel.created_at.desc())
         )
+        result = await self.session.execute(stmt)
+        return [self._to_entity(model) for model in result.scalars().all()]
+
+    async def search(self, *, book_filter: BookFilter) -> list[Book]:
+        stmt = select(BookModel)
+        conditions: list = [
+            BookModel.owner_user_id == book_filter.owner_user_id.value,
+        ]
+
+        if book_filter.query:
+            tsquery = func.plainto_tsquery("english", book_filter.query)
+
+            book_match = BookModel.search_vector.op("@@")(tsquery)
+
+            contributor_match = exists(
+                select(literal(1))
+                .select_from(BookContributorModel)
+                .join(ContributorModel)
+                .where(
+                    BookContributorModel.book_id == BookModel.id,
+                    ContributorModel.search_vector.op("@@")(tsquery),
+                )
+            )
+
+            shelf_match = exists(
+                select(literal(1))
+                .select_from(ShelfBookModel)
+                .join(ShelfModel)
+                .where(
+                    ShelfBookModel.book_id == BookModel.id,
+                    ShelfModel.user_id == book_filter.owner_user_id.value,
+                    ShelfModel.search_vector.op("@@")(tsquery),
+                )
+            )
+
+            label_match = exists(
+                select(literal(1))
+                .select_from(BookLabelModel)
+                .join(LabelModel)
+                .where(
+                    BookLabelModel.book_id == BookModel.id,
+                    or_(
+                        LabelModel.owner_user_id == book_filter.owner_user_id.value,
+                        LabelModel.is_system.is_(True),
+                    ),
+                    LabelModel.search_vector.op("@@")(tsquery),
+                )
+            )
+
+            conditions.append(
+                or_(book_match, contributor_match, shelf_match, label_match)
+            )
+
+        needs_state_join = any([
+            book_filter.favorited is not None,
+            book_filter.archived is not None,
+            book_filter.completed is not None,
+            book_filter.continue_reading is not None,
+            book_filter.sort_by == BookSortField.LAST_OPENED_AT,
+        ])
+
+        if needs_state_join:
+            stmt = stmt.outerjoin(
+                UserBookStateModel,
+                and_(
+                    UserBookStateModel.book_id == BookModel.id,
+                    UserBookStateModel.user_id == book_filter.owner_user_id.value,
+                ),
+            )
+
+        no_state_row = UserBookStateModel.user_id.is_(None)
+
+        if book_filter.favorited is True:
+            conditions.append(UserBookStateModel.favorited_at.is_not(None))
+        elif book_filter.favorited is False:
+            conditions.append(
+                or_(UserBookStateModel.favorited_at.is_(None), no_state_row)
+            )
+
+        if book_filter.archived is True:
+            conditions.append(UserBookStateModel.archived_at.is_not(None))
+        elif book_filter.archived is False:
+            conditions.append(
+                or_(UserBookStateModel.archived_at.is_(None), no_state_row)
+            )
+
+        if book_filter.completed is True:
+            conditions.append(UserBookStateModel.completed_at.is_not(None))
+        elif book_filter.completed is False:
+            conditions.append(
+                or_(UserBookStateModel.completed_at.is_(None), no_state_row)
+            )
+
+        if book_filter.continue_reading is True:
+            conditions.append(UserBookStateModel.last_opened_at.is_not(None))
+            conditions.append(
+                or_(UserBookStateModel.completed_at.is_(None), no_state_row)
+            )
+
+        if book_filter.document_type:
+            conditions.append(BookModel.document_type == book_filter.document_type)
+        if book_filter.status:
+            conditions.append(BookModel.status == book_filter.status)
+
+        stmt = stmt.where(*conditions)
+
+        sort_col_map = {
+            BookSortField.CREATED_AT: BookModel.created_at,
+            BookSortField.TITLE: BookModel.title,
+            BookSortField.LAST_OPENED_AT: UserBookStateModel.last_opened_at,
+        }
+        sort_col = sort_col_map[book_filter.sort_by]
+
+        if book_filter.sort_dir == SortDirection.DESC:
+            stmt = stmt.order_by(sort_col.desc().nullslast())
+        else:
+            stmt = stmt.order_by(sort_col.asc().nullsfirst())
+
+        if book_filter.limit is not None:
+            stmt = stmt.limit(book_filter.limit)
+        if book_filter.offset:
+            stmt = stmt.offset(book_filter.offset)
+
         result = await self.session.execute(stmt)
         return [self._to_entity(model) for model in result.scalars().all()]
 
