@@ -1,6 +1,7 @@
 from contextlib import asynccontextmanager
 from typing import Any, cast
 
+import uvloop
 from fastapi import FastAPI
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
@@ -12,6 +13,8 @@ from app.presentation.api.exception_handlers import register_exception_handlers
 from app.presentation.api.middleware.rate_limiter import limiter
 from app.presentation.api.middlewares import register_middleware
 from app.presentation.api.routers import register_routers
+
+uvloop.install()
 
 
 @asynccontextmanager

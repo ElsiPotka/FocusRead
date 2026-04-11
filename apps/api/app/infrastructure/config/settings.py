@@ -157,6 +157,14 @@ class Settings(BaseSettings):
         description="Max additional connections beyond pool_size under load",
     )
 
+    USE_PGBOUNCER: bool = Field(
+        default=False,
+        description=(
+            "When true, use NullPool and disable prepared statements "
+            "for PgBouncer transaction-level pooling compatibility"
+        ),
+    )
+
     POSTGRES_SERVER: str = Field(
         default="127.0.0.1",
         description="PostgreSQL server hostname or IP address",

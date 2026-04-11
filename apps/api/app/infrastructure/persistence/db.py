@@ -10,6 +10,7 @@ from sqlalchemy.ext.asyncio import (
     async_sessionmaker,
     create_async_engine,
 )
+from sqlalchemy.pool import NullPool
 
 from app.infrastructure.config.settings import settings
 from app.infrastructure.logging.logger import log
@@ -29,14 +30,22 @@ class DatabaseSessionManager:
         if self._engine is not None and self._sessionmaker is not None:
             return
 
-        self._engine = create_async_engine(
-            database_url,
-            echo=settings.DB_ECHO,
-            pool_pre_ping=True,
-            pool_size=settings.DB_POOL_SIZE,
-            max_overflow=settings.DB_MAX_OVERFLOW,
-            pool_recycle=3600,
-        )
+        engine_kwargs: dict = {
+            "echo": settings.DB_ECHO,
+        }
+
+        if settings.USE_PGBOUNCER:
+            engine_kwargs["poolclass"] = NullPool
+            engine_kwargs["connect_args"] = {
+                "prepared_statement_name_cb": lambda: "",
+            }
+        else:
+            engine_kwargs["pool_pre_ping"] = True
+            engine_kwargs["pool_size"] = settings.DB_POOL_SIZE
+            engine_kwargs["max_overflow"] = settings.DB_MAX_OVERFLOW
+            engine_kwargs["pool_recycle"] = 3600
+
+        self._engine = create_async_engine(database_url, **engine_kwargs)
         self._sessionmaker = async_sessionmaker(
             bind=self._engine,
             class_=AsyncSession,

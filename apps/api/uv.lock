@@ -486,6 +486,7 @@ dependencies = [
     { name = "slowapi" },
     { name = "sqlalchemy", extra = ["asyncio"] },
     { name = "sse-starlette" },
+    { name = "uvloop" },
 ]
 
 [package.dev-dependencies]
@@ -513,6 +514,7 @@ requires-dist = [
     { name = "slowapi", specifier = ">=0.1.9" },
     { name = "sqlalchemy", extras = ["asyncio"], specifier = ">=2.0.44" },
     { name = "sse-starlette", specifier = ">=3.3.0" },
+    { name = "uvloop", specifier = ">=0.22.1" },
 ]
 
 [package.metadata.requires-dev]

@@ -25,6 +25,7 @@ dependencies = [
     "PyMuPDF>=1.27.0",
     "sse-starlette>=3.3.0",
     "orjson>=3.11.8",
+    "uvloop>=0.22.1",
 ]
 
 [dependency-groups]
