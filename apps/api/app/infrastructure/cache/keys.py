@@ -27,3 +27,15 @@ def reading_session_key(user_id: str, book_id: str) -> str:
 
 def book_ownership_key(user_id: str, book_id: str) -> str:
     return build_cache_key("book-ownership", user_id, book_id)
+
+
+def theme_key(theme_id: str) -> str:
+    return build_cache_key("theme", theme_id)
+
+
+def user_active_theme_key(user_id: str) -> str:
+    return build_cache_key("theme", "active", user_id)
+
+
+def marketplace_themes_key(sort_by: str, page: int) -> str:
+    return build_cache_key("theme", "marketplace", sort_by, page)

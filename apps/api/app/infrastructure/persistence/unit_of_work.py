@@ -45,6 +45,9 @@ from app.infrastructure.persistence.repositories.session_repository import (
 from app.infrastructure.persistence.repositories.shelf_repository import (
     SqlAlchemyShelfRepository,
 )
+from app.infrastructure.persistence.repositories.theme_repository import (
+    SqlAlchemyThemeRepository,
+)
 from app.infrastructure.persistence.repositories.user_book_state_repository import (
     SqlAlchemyUserBookStateRepository,
 )
@@ -70,6 +73,7 @@ class SqlAlchemyUnitOfWork(AbstractUnitOfWork):
         self.reading_sessions = SqlAlchemyReadingSessionRepository(session)
         self.reading_stats = SqlAlchemyReadingStatRepository(session)
         self.shelves = SqlAlchemyShelfRepository(session)
+        self.themes = SqlAlchemyThemeRepository(session)
         self.user_book_states = SqlAlchemyUserBookStateRepository(session)
         self.users = SqlAlchemyUserRepository(session)
         self.roles = SqlAlchemyRoleRepository(session)

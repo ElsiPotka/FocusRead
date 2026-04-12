@@ -16,6 +16,11 @@ from app.infrastructure.persistence.models.reading_stat import ReadingStatModel
 from app.infrastructure.persistence.models.role import RoleModel
 from app.infrastructure.persistence.models.session import SessionModel
 from app.infrastructure.persistence.models.shelf import ShelfBookModel, ShelfModel
+from app.infrastructure.persistence.models.theme import (
+    ThemeLikeModel,
+    ThemeModel,
+    UserActiveThemeModel,
+)
 from app.infrastructure.persistence.models.user import UserModel
 from app.infrastructure.persistence.models.user_book_state import UserBookStateModel
 
@@ -39,6 +44,9 @@ __all__ = [
     "SessionModel",
     "ShelfBookModel",
     "ShelfModel",
+    "ThemeLikeModel",
+    "ThemeModel",
+    "UserActiveThemeModel",
     "UserBookStateModel",
     "UserModel",
 ]

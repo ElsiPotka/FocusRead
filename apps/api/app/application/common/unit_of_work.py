@@ -22,6 +22,7 @@ if TYPE_CHECKING:
     from app.domain.reading_stats.repositories import ReadingStatRepository
     from app.domain.role.repositories import RoleRepository
     from app.domain.shelf.repositories import ShelfRepository
+    from app.domain.theme.repositories import ThemeRepository
     from app.domain.user_book_state.repositories import UserBookStateRepository
 
 
@@ -35,6 +36,7 @@ class AbstractUnitOfWork(ABC):
     reading_sessions: ReadingSessionRepository
     reading_stats: ReadingStatRepository
     shelves: ShelfRepository
+    themes: ThemeRepository
     user_book_states: UserBookStateRepository
     users: UserRepository
     roles: RoleRepository
