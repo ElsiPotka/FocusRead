@@ -18,10 +18,29 @@ This folder contains the pure business model for the API.
 
 ## Current Aggregates
 
-- `books/`: book entities, status, repositories, and related rules
-- `user/`: user entity
-- `session/`: session entity
-- `account/`: account entity
-- `auth/`: auth-specific repository contracts, value objects, errors, and entity compatibility exports
+Auth and identity:
 
-`auth/entities/` currently acts as a compatibility facade. The concrete entity implementations live in the aggregate-specific folders such as `user/`, `session/`, and `account/`.
+- `auth/`
+- `user/`
+- `session/`
+- `account/`
+- `role/`
+
+Reading and library:
+
+- `books/`
+- `book_chunks/`
+- `book_toc_entry/`
+- `reading_sessions/`
+- `reading_stats/`
+- `user_book_state/`
+
+Organization and curation:
+
+- `bookmark/`
+- `contributor/`
+- `label/`
+- `shelf/`
+
+This means the domain layer already models the main backend concepts from the current
+product idea: ingest, read, organize, measure, and curate.

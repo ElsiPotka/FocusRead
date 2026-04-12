@@ -2,34 +2,82 @@
 
 FastAPI backend for the FocusRead monorepo.
 
-This service is organized with a DDD-style split:
+As of 2026-04-12 this service is no longer a scaffold. It is the most complete part
+of the repo and already covers most backend work needed for the product described in
+[`../../docs/IDEA.md`](../../docs/IDEA.md).
 
-- `domain`: business entities, value objects, repository contracts, domain errors
+## Current Backend Progression
+
+Implemented end-to-end slices:
+
+- auth and RBAC: register, login, refresh, logout, current user, Google and Apple
+  OAuth callbacks, role-based scopes, and admin role assignment/removal
+- book ingestion: PDF upload, local file storage, Celery processing, Redis-backed
+  progress events, chunk persistence, chunk caching, metadata CRUD, search, and
+  filtered library views
+- reading flow: chunk resolution, session resume, progress upsert, per-book stats,
+  summary stats, and user book state preferences
+- library organization: shelves, labels, bookmarks, contributors, favorites,
+  archive, completed, and continue-reading helpers
+- admin curation: user listing plus system-label CRUD
+- supporting infrastructure: Alembic migrations, async SQLAlchemy repositories,
+  Redis cache helpers, typed settings, middleware, and worker tasks
+
+The backend rollout described in
+[`../../docs/BACKEND_IMPLEMENTATION_PLAN.md`](../../docs/BACKEND_IMPLEMENTATION_PLAN.md)
+is largely reflected in code. The biggest remaining product work now sits outside
+this service: web/mobile clients, end-to-end deployment validation, and final
+polish. One visible backend gap is that book TOC storage exists, but the PDF worker
+still finishes with `toc_extracted = false`, so automatic TOC extraction is not yet
+fully wired into processing.
+
+## Stack Snapshot
+
+As of 2026-04-12 this service targets:
+
+- Python 3.14+
+- FastAPI `0.135.3+`
+- SQLAlchemy asyncio `2.0.44+`
+- Alembic `1.16.5+`
+- Celery `5.5.3+`
+- Redis client `6.2.0+`
+- PostgreSQL via `asyncpg 0.30.0+`
+- `uv` for environment and command execution
+
+The local deployment scaffold in `../deployment/docker-compose.yml` currently uses
+PostgreSQL 17 and Redis 7. The persistence layer still relies on a database-side
+`uuidv7()` SQL function.
+
+## Architecture Overview
+
+This service keeps a DDD-style split:
+
+- `domain`: business entities, value objects, repository contracts, and domain errors
 - `application`: use cases that orchestrate domain objects through a unit of work
-- `infrastructure`: SQLAlchemy, Redis, auth services, settings, logging, DI
-- `presentation`: FastAPI routers, schemas, middleware, exception mapping
-- `workers`: Celery worker, beat scheduler, async background tasks
+- `infrastructure`: SQLAlchemy, Redis, auth services, storage, settings, logging, DI
+- `presentation`: FastAPI routers, schemas, middleware, and exception mapping
+- `workers`: Celery broker, PDF processing, tokenizer, and async background tasks
 
-## Project Tree
+Project tree:
 
 ```text
 apps/api/
-├── alembic/                    # Alembic environment and migration files
+├── alembic/                    # Migration environment and revision history
 ├── app/
-│   ├── application/           # Use cases and application-level orchestration
+│   ├── application/           # Use cases for auth, books, reading, library, admin
 │   ├── domain/                # Pure business logic and repository interfaces
-│   ├── infrastructure/        # Adapters: DB, Redis, auth, config, logging, DI
+│   ├── infrastructure/        # DB, Redis, auth, config, storage, logging, DI
 │   ├── presentation/          # FastAPI HTTP layer
-│   ├── workers/               # Celery broker, scheduler, and tasks
+│   ├── workers/               # Celery broker, tokenizer, PDF processing, tasks
 │   └── main.py                # FastAPI entrypoint
+├── tests/                     # Domain, use-case, API, infra, and worker tests
 ├── storage/                   # Local runtime files such as uploads and logs
-├── tests/                     # Domain and use-case tests
 ├── .env.example               # Local configuration template
 ├── pyproject.toml             # Dependencies and tool configuration
 └── README.md
 ```
 
-Each main folder also has its own `README.md` with more detail:
+Layer-specific documentation:
 
 - `app/README.md`
 - `alembic/README.md`
@@ -43,22 +91,13 @@ Each main folder also has its own `README.md` with more detail:
 - `app/workers/README.md`
 - `tests/README.md`
 
-## Requirements
-
-- Python 3.14+
-- PostgreSQL
-- Redis
-- `uv`
-
-The persistence models and migrations use `uuidv7()` as a database-side default. Your PostgreSQL instance must expose that SQL function.
-
-## Local Setup
+## Local Development
 
 Run all commands from `apps/api`.
 
 ```bash
 cp .env.example .env
-# start PostgreSQL and Redis with your preferred local setup
+docker compose -f ../deployment/docker-compose.yml up postgres redis -d
 uv sync --dev
 uv run alembic upgrade head
 uv run fastapi dev app/main.py
@@ -66,12 +105,12 @@ uv run fastapi dev app/main.py
 
 What this does:
 
-- `.env` provides local settings consumed by `app.infrastructure.config.settings`
-- `uv sync --dev` installs runtime and dev dependencies into the local environment
+- `.env` provides settings consumed by `app.infrastructure.config.settings`
+- `docker compose ... up postgres redis -d` starts the two services the API needs for
+  local work
+- `uv sync --dev` installs runtime and development dependencies
 - `alembic upgrade head` creates or upgrades the schema
-- `fastapi dev app/main.py` starts the FastAPI app with reload
-
-The old `app/core/main.py` path is no longer valid. The current entrypoint is `app/main.py`.
+- `fastapi dev app/main.py` starts the API with reload
 
 After startup:
 
@@ -79,61 +118,21 @@ After startup:
 - Swagger UI: `http://127.0.0.1:8000/docs`
 - Health endpoint: `http://127.0.0.1:8000/api/v1/health`
 
-## Production-Like Run
-
-```bash
-uv run fastapi run app/main.py
-```
-
-The app bootstraps through `app.main:create_application()`, which:
-
-- creates storage directories
-- configures logging
-- initializes the async SQLAlchemy engine
-- initializes the Redis client
-- registers middleware, exception handlers, and routers
-
-## Workers
-
-The app uses Celery with Redis as broker and result backend.
-
-Run a worker:
+If you want upload processing to run end to end, start a worker in a separate shell:
 
 ```bash
 uv run celery -A app.workers.broker.celery_app worker --loglevel=info
 ```
 
-Run beat:
+Optional beat process:
 
 ```bash
 uv run celery -A app.workers.broker.celery_app beat --loglevel=info
 ```
 
-## Migrations
+## Testing And Quality Checks
 
-Upgrade:
-
-```bash
-uv run alembic upgrade head
-```
-
-Create a manual revision:
-
-```bash
-uv run alembic revision -m "create_roles_table"
-```
-
-Create an autogenerated revision:
-
-```bash
-uv run alembic revision --autogenerate -m "add_role_tables"
-```
-
-Migration filenames are timestamp-prefixed in `YYYY-MM-DD_HHMM_<rev>_<slug>.py` format.
-
-## Quality Checks
-
-After every code change, run this validation sequence from `apps/api`:
+From `apps/api`:
 
 ```bash
 uv run ruff check . --fix
@@ -143,287 +142,35 @@ uvx basedpyright
 uv run pytest
 ```
 
-If you are iterating on one slice, these focused test commands are useful before the full suite:
-
-Run only domain tests:
+Useful focused commands:
 
 ```bash
 uv run pytest tests/domain
-```
-
-Run only use-case tests:
-
-```bash
 uv run pytest tests/usecase
+uv run pytest tests/presentation
+uv run pytest tests/workers
 ```
 
-## How To Add A New Feature
+## Migrations
 
-Use a vertical slice. Add the domain objects first, then persistence, then application logic, then the HTTP layer, then tests.
-
-### Example: User Roles With A Pivot Table
-
-Goal:
-
-- one `User`
-- many `Role`
-- many-to-many relation through a pivot table such as `user_roles`
-
-### 1. Design The Domain Boundary
-
-Start by deciding whether the pivot is only a persistence detail or a real domain concept.
-
-- If the pivot only links users and roles, keep the join table in infrastructure and model the feature mainly through a `role` domain.
-- If the pivot has business meaning such as assignment source, expiry, approval, or audit behavior, create a dedicated domain such as `role_assignment` or `membership`.
-
-For the simple case, add:
-
-```text
-app/domain/role/
-├── __init__.py
-├── entities.py
-├── repositories.py
-└── value_objects.py
-```
-
-Typical contents:
-
-- `entities.py`: `Role`
-- `value_objects.py`: `RoleId`, `RoleName`, maybe `RoleCode`
-- `repositories.py`: `RoleRepository` contract
-
-Rules:
-
-- keep domain classes free of SQLAlchemy, FastAPI, Redis, and Pydantic
-- put validation in value objects where possible
-- keep business rules inside entities or use cases, not in routers
-
-### 2. Add Persistence Models
-
-Create the SQLAlchemy models in `app/infrastructure/persistence/models`.
-
-For example:
-
-```text
-app/infrastructure/persistence/models/
-├── role.py
-└── user_role.py
-```
-
-Recommended approach:
-
-- `RoleModel(BaseModel)` for the `roles` table
-- `UserRoleModel(BaseModel)` if you want the pivot to behave like a first-class persisted record with its own `id`, timestamps, and future extensibility
-
-Alternative:
-
-- if you want a pure join table with only `user_id` and `role_id`, you can use a plain SQLAlchemy table or a `Base` model with a composite key instead of `BaseModel`
-
-When you add relationships, be explicit about loading strategy. In async SQLAlchemy code, avoid accidental lazy loads leaking outside the repository. Prefer:
-
-- `lazy="selectin"` on relationships when appropriate
-- query-time `selectinload(...)` or explicit joins inside repository methods
-
-Also update:
-
-- `app/infrastructure/persistence/models/__init__.py` so Alembic metadata imports the new models
-
-### 3. Create The Migration
-
-Add an Alembic revision for:
-
-- `roles`
-- `user_roles`
-- unique constraints such as `(user_id, role_id)`
-- indexes for read patterns such as `user_id`, `role_id`, or `role_name`
-
-Command:
+Upgrade the database:
 
 ```bash
-uv run alembic revision --autogenerate -m "add roles and user_roles"
+uv run alembic upgrade head
 ```
 
-Then review the generated file manually before applying it.
+Create a manual revision:
 
-### 4. Implement The Repository Layer
-
-Create a repository implementation in `app/infrastructure/persistence/repositories`.
-
-For example:
-
-```text
-app/infrastructure/persistence/repositories/role_repository.py
+```bash
+uv run alembic revision -m "describe_change"
 ```
 
-The repository should:
+Create an autogenerated revision:
 
-- translate SQLAlchemy models to domain entities
-- translate domain entities to SQLAlchemy models
-- keep ORM details inside infrastructure
-- return domain types such as `Role`, not `RoleModel`
-
-Typical methods:
-
-- `save(role)`
-- `get(role_id)`
-- `get_by_name(name)`
-- `list_for_user(user_id)`
-- `assign_to_user(user_id, role_id)`
-- `remove_from_user(user_id, role_id)`
-
-### 5. Register The Repository In The Unit Of Work
-
-If the feature participates in application transactions, wire it into:
-
-- `app/application/common/unit_of_work.py`
-- `app/infrastructure/persistence/unit_of_work.py`
-
-Add:
-
-- a `roles: RoleRepository` attribute to `AbstractUnitOfWork`
-- a concrete `self.roles = SqlAlchemyRoleRepository(session)` in `SqlAlchemyUnitOfWork`
-
-This keeps use cases working against application-facing interfaces instead of importing SQLAlchemy directly.
-
-### 6. Add Application Use Cases
-
-Create a feature module under `app/application`.
-
-For example:
-
-```text
-app/application/roles/
-├── __init__.py
-├── assign_role.py
-├── list_user_roles.py
-└── remove_role.py
+```bash
+uv run alembic revision --autogenerate -m "describe_change"
 ```
 
-Each use case should:
-
-- accept primitive input from the caller
-- convert primitives into domain value objects
-- call repositories through the unit of work
-- commit once for successful writes
-- raise domain or application errors, not HTTP exceptions
-
-### 7. Add Pydantic Schemas And Routers
-
-Add request and response models in:
-
-```text
-app/presentation/api/schemas/role.py
-```
-
-Examples:
-
-- `AssignRoleRequest`
-- `RoleResponse`
-- `UserRolesResponse`
-
-Add the router in:
-
-```text
-app/presentation/api/routers/roles.py
-```
-
-Then register it in:
-
-- `app/presentation/api/routers/__init__.py`
-
-Validation belongs at the HTTP boundary:
-
-- use `Field(...)` constraints for lengths
-- use constrained types such as `EmailStr` where relevant
-- map domain entities to response DTOs with helper constructors such as `from_entity(...)`
-
-### 8. Add Redis Cache Only Where It Helps
-
-Not every feature needs Redis. Add caching only when you have a repeated read path or expensive assembly step.
-
-If role data should be cached, add cache key helpers in:
-
-```text
-app/infrastructure/cache/keys.py
-```
-
-Examples:
-
-- `user_roles_key(user_id)`
-- `role_permissions_key(role_id)`
-
-Use `RedisCache` or a dedicated service when you need:
-
-- read-through caching
-- invalidation after writes
-- short-lived projection caches
-
-Invalidate caches whenever:
-
-- a role is created or renamed
-- a user-role assignment changes
-- role permissions change
-
-### 9. Update Dependency Shortcuts Only If Shared Broadly
-
-If the feature introduces reusable dependencies or typed aliases, update:
-
-- `app/infrastructure/di/dependencies.py`
-
-Do this only for dependencies that are used across multiple routers or modules.
-
-### 10. Write Tests At The Right Layer
-
-Current test structure:
-
-```text
-tests/
-├── domain/    # pure entity and value object tests
-└── usecase/   # use cases tested with mocked repositories/services
-```
-
-For the roles example, add:
-
-```text
-tests/domain/role/
-tests/usecase/roles/
-```
-
-What to test:
-
-- domain tests for entity invariants and value-object validation
-- use-case tests with `AsyncMock` repositories and `AbstractUnitOfWork`
-- repository tests if you introduce non-trivial query behavior
-- API tests if you add router behavior that is worth validating end to end
-
-Follow the existing style:
-
-- domain tests instantiate entities directly
-- use-case tests mock repository contracts, not SQLAlchemy sessions
-- assert that `uow.commit()` is called on successful writes and not called on failures
-
-### 11. Keep The Layering Clean
-
-When adding any new feature, avoid these shortcuts:
-
-- do not import SQLAlchemy models into `domain`
-- do not put HTTP request/response logic into `application`
-- do not return ORM models from repositories
-- do not hide business rules in routers
-- do not let Redis keys or cache payload shapes leak into domain entities
-
-## Folder Guide
-
-Open the local README in each main folder when working in that area:
-
-- [app/README.md](./app/README.md)
-- [alembic/README.md](./alembic/README.md)
-- [app/application/README.md](./app/application/README.md)
-- [app/application/common/README.md](./app/application/common/README.md)
-- [app/domain/README.md](./app/domain/README.md)
-- [app/infrastructure/README.md](./app/infrastructure/README.md)
-- [app/infrastructure/persistence/README.md](./app/infrastructure/persistence/README.md)
-- [app/presentation/README.md](./app/presentation/README.md)
-- [app/presentation/api/README.md](./app/presentation/api/README.md)
-- [app/workers/README.md](./app/workers/README.md)
-- [tests/README.md](./tests/README.md)
+Migration filenames are timestamp-prefixed in
+`YYYY-MM-DD_HHMM_<rev>_<slug>.py` format. Always review autogenerated
+revisions before applying them.

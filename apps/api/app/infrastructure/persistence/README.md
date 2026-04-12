@@ -2,24 +2,42 @@
 
 This package contains the async SQLAlchemy persistence implementation.
 
+## Current Progress
+
+The persistence layer now covers the main backend schema from the implementation
+plan:
+
+- identity: users, accounts, sessions, JWT signing keys, roles, and user-role links
+- reading: books, book chunks, TOC entries, reading sessions, reading stats, and user
+  book state
+- organization: contributors, shelves, labels, bookmarks, and related join tables
+
+Search support is already wired for searchable aggregates through stored generated
+`tsvector` columns and `GIN` indexes.
+
 ## Files And Folders
 
 - `db.py`: async engine and session lifecycle
-- `models/`: SQLAlchemy models and shared base classes
+- `models/`: SQLAlchemy models, mixins, and shared base classes
 - `repositories/`: concrete repository implementations
+- `migrations/search.py`: shared helpers for generated search columns and indexes
 - `pagination.py`: shared pagination helpers
 - `unit_of_work.py`: concrete SQLAlchemy unit of work
 
 ## Model Rules
 
 - put persistence-only columns and relationships in SQLAlchemy models
-- inherit from `BaseModel` when the table should have `id`, `created_at`, and `updated_at`
+- inherit from `BaseModel` when the table should have `id`, `created_at`, and
+  `updated_at`
 - export new models from `models/__init__.py` so Alembic sees them
-- when adding relationships, use explicit loading strategies such as `selectinload(...)` or `lazy="selectin"` instead of relying on incidental lazy loads
-- use `SearchMixin` on searchable aggregates and pair it with a stored generated `tsvector` column plus a `GIN` index in migrations
+- when adding relationships, use explicit loading strategies such as
+  `selectinload(...)` or `lazy="selectin"` instead of relying on incidental lazy
+  loads
+- use `SearchMixin` with a stored generated `tsvector` column plus a `GIN` index in
+  migrations
 - use `MetadataMixin` only for flexible non-query-critical data
-- use `VersionMixin` on editorial aggregates where optimistic locking is useful
-- use `SlugMixin` for normalized identifiers, but enforce uniqueness at the model level only where the aggregate actually needs it
+- use `VersionMixin` on aggregates where optimistic locking is useful
+- use `SlugMixin` only where normalized identifiers are part of the aggregate design
 
 ## Repository Rules
 
@@ -29,4 +47,6 @@ This package contains the async SQLAlchemy persistence implementation.
 
 ## Unit Of Work
 
-`SqlAlchemyUnitOfWork` is the composition root for repository access inside transactional use cases. Any repository used from the application layer must be exposed there.
+`SqlAlchemyUnitOfWork` is the composition root for repository access inside
+transactional use cases. Any repository used from the application layer must be
+exposed there.
