@@ -508,7 +508,7 @@ requires-dist = [
     { name = "orjson", specifier = ">=3.11.8" },
     { name = "pwdlib", extras = ["argon2"], specifier = ">=0.2.0" },
     { name = "pydantic-settings", specifier = ">=2.11.0" },
-    { name = "pyjwt", extras = ["crypto"], specifier = ">=2.10.0" },
+    { name = "pyjwt", extras = ["crypto"], specifier = ">=2.12.1" },
     { name = "pymupdf", specifier = ">=1.27.0" },
     { name = "redis", extras = ["hiredis"], specifier = ">=6.2.0" },
     { name = "slowapi", specifier = ">=0.1.9" },
