@@ -2,8 +2,7 @@ from __future__ import annotations
 
 from uuid import uuid4
 
-from app.domain.auth.value_objects import UserId
-from app.domain.books.value_objects import BookId
+from app.domain.library_item.value_objects import LibraryItemId
 from app.domain.reading_sessions.entities import ReadingSession
 from app.domain.reading_sessions.value_objects import (
     CurrentChunk,
@@ -13,13 +12,17 @@ from app.domain.reading_sessions.value_objects import (
 )
 
 
-def make_session(**kwargs) -> ReadingSession:
-    defaults = {
-        "user_id": UserId(uuid4()),
-        "book_id": BookId(uuid4()),
-    }
-    defaults.update(kwargs)
-    return ReadingSession.create(**defaults)
+def make_session(
+    *,
+    library_item_id: LibraryItemId | None = None,
+    wpm_speed: WpmSpeed | None = None,
+    words_per_flash: WordsPerFlash | None = None,
+) -> ReadingSession:
+    return ReadingSession.create(
+        library_item_id=library_item_id or LibraryItemId(uuid4()),
+        wpm_speed=wpm_speed,
+        words_per_flash=words_per_flash,
+    )
 
 
 def test_create_defaults():

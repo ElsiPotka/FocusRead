@@ -12,17 +12,22 @@ from app.domain.reading_sessions.value_objects import (
 )
 
 if TYPE_CHECKING:
-    from app.domain.auth.value_objects import UserId
-    from app.domain.books.value_objects import BookId
+    from app.domain.library_item.value_objects import LibraryItemId
 
 
 class ReadingSession:
+    """A user's active reading cursor for a single `LibraryItem`.
+
+    Re-anchored from `(user_id, book_id)` to `library_item_id`: progress
+    belongs to the user's readable copy, not the catalog book. Enforced
+    unique per library item at the DB layer.
+    """
+
     def __init__(
         self,
         *,
         id: ReadingSessionId,
-        user_id: UserId,
-        book_id: BookId,
+        library_item_id: LibraryItemId,
         current_word_index: CurrentWordIndex,
         current_chunk: CurrentChunk,
         wpm_speed: WpmSpeed,
@@ -32,8 +37,7 @@ class ReadingSession:
         updated_at: datetime | None = None,
     ) -> None:
         self._id = id
-        self._user_id = user_id
-        self._book_id = book_id
+        self._library_item_id = library_item_id
         self._current_word_index = current_word_index
         self._current_chunk = current_chunk
         self._wpm_speed = wpm_speed
@@ -46,15 +50,13 @@ class ReadingSession:
     def create(
         cls,
         *,
-        user_id: UserId,
-        book_id: BookId,
+        library_item_id: LibraryItemId,
         wpm_speed: WpmSpeed | None = None,
         words_per_flash: WordsPerFlash | None = None,
     ) -> ReadingSession:
         return cls(
             id=ReadingSessionId.generate(),
-            user_id=user_id,
-            book_id=book_id,
+            library_item_id=library_item_id,
             current_word_index=CurrentWordIndex(0),
             current_chunk=CurrentChunk(0),
             wpm_speed=wpm_speed or WpmSpeed(250),
@@ -66,12 +68,8 @@ class ReadingSession:
         return self._id
 
     @property
-    def user_id(self) -> UserId:
-        return self._user_id
-
-    @property
-    def book_id(self) -> BookId:
-        return self._book_id
+    def library_item_id(self) -> LibraryItemId:
+        return self._library_item_id
 
     @property
     def current_word_index(self) -> CurrentWordIndex:

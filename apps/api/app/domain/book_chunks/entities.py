@@ -12,15 +12,23 @@ from app.domain.book_chunks.value_objects import (
 )
 
 if TYPE_CHECKING:
-    from app.domain.books.value_objects import BookId
+    from app.domain.book_asset.value_objects import BookAssetId
 
 
 class BookChunk:
+    """A contiguous slice of processed content owned by a `BookAsset`.
+
+    Re-anchored from `Book` to `BookAsset`: chunk content is a property of
+    the stored file + processing pipeline, not of catalog identity. Two
+    canonical books that resolve to the same `BookAsset` share the same
+    chunks.
+    """
+
     def __init__(
         self,
         *,
         id: BookChunkId,
-        book_id: BookId,
+        book_asset_id: BookAssetId,
         chunk_index: ChunkIndex,
         start_word_index: StartWordIndex,
         word_data: ChunkWordData,
@@ -36,7 +44,7 @@ class BookChunk:
             raise ValueError("Page end must be positive.")
 
         self._id = id
-        self._book_id = book_id
+        self._book_asset_id = book_asset_id
         self._chunk_index = chunk_index
         self._start_word_index = start_word_index
         self._word_data = word_data
@@ -50,7 +58,7 @@ class BookChunk:
     def create(
         cls,
         *,
-        book_id: BookId,
+        book_asset_id: BookAssetId,
         chunk_index: ChunkIndex,
         start_word_index: StartWordIndex,
         word_data: ChunkWordData,
@@ -60,7 +68,7 @@ class BookChunk:
     ) -> BookChunk:
         return cls(
             id=BookChunkId.generate(),
-            book_id=book_id,
+            book_asset_id=book_asset_id,
             chunk_index=chunk_index,
             start_word_index=start_word_index,
             word_data=word_data,
@@ -74,8 +82,8 @@ class BookChunk:
         return self._id
 
     @property
-    def book_id(self) -> BookId:
-        return self._book_id
+    def book_asset_id(self) -> BookAssetId:
+        return self._book_asset_id
 
     @property
     def chunk_index(self) -> ChunkIndex:

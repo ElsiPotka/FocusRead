@@ -1,30 +1,37 @@
 from __future__ import annotations
 
-from typing import Any, cast
+from typing import TYPE_CHECKING
 
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy.orm.attributes import flag_modified
 
+from app.types import JSONObject  # noqa: TC001
+
+if TYPE_CHECKING:
+    from app.types import JSONValue
+
 
 class MetadataMixin:
     """Adds mutable JSON metadata helpers to a persistence model."""
 
-    entity_metadata: Mapped[dict[str, Any] | None] = mapped_column(
+    entity_metadata: Mapped[JSONObject | None] = mapped_column(
         JSONB,
         nullable=True,
         comment="Flexible JSON metadata storage",
     )
 
-    def set_metadata(self, key: str, value: Any) -> None:
-        if self.entity_metadata is None:
-            self.entity_metadata = {}
-
-        metadata = cast("dict[str, Any]", self.entity_metadata)
+    def set_metadata(self, key: str, value: JSONValue) -> None:
+        metadata = self.entity_metadata
+        if metadata is None:
+            metadata = {}
+            self.entity_metadata = metadata
         metadata[key] = value
         flag_modified(self, "entity_metadata")
 
-    def get_metadata(self, key: str, default: Any = None) -> Any:
+    def get_metadata[TDefault](
+        self, key: str, default: TDefault | None = None
+    ) -> JSONValue | TDefault | None:
         if self.entity_metadata is None:
             return default
         return self.entity_metadata.get(key, default)

@@ -34,7 +34,9 @@ class SqlAlchemyThemeRepository(ThemeRepository):
         if model is None:
             model = ThemeModel(
                 id=theme.id.value,
-                owner_user_id=theme.owner_user_id.value if theme.owner_user_id else None,
+                owner_user_id=theme.owner_user_id.value
+                if theme.owner_user_id
+                else None,
                 name=theme.name.value,
                 slug=theme.slug.value,
                 description=theme.description.value if theme.description else None,
@@ -46,7 +48,9 @@ class SqlAlchemyThemeRepository(ThemeRepository):
                 is_featured=theme.is_featured,
                 download_count=theme.download_count,
                 like_count=theme.like_count,
-                forked_from_id=theme.forked_from_id.value if theme.forked_from_id else None,
+                forked_from_id=theme.forked_from_id.value
+                if theme.forked_from_id
+                else None,
                 created_at=theme.created_at,
                 updated_at=theme.updated_at,
             )
@@ -111,7 +115,9 @@ class SqlAlchemyThemeRepository(ThemeRepository):
 
         if query:
             base = base.where(
-                ThemeModel.search_vector.op("@@")(func.plainto_tsquery("english", query))
+                ThemeModel.search_vector.op("@@")(
+                    func.plainto_tsquery("english", query)
+                )
             )
 
         count_stmt = select(func.count()).select_from(base.subquery())
@@ -139,9 +145,7 @@ class SqlAlchemyThemeRepository(ThemeRepository):
 
     # ── User active theme ──
 
-    async def get_active_theme_id(
-        self, *, user_id: UserId
-    ) -> ThemeId | None:
+    async def get_active_theme_id(self, *, user_id: UserId) -> ThemeId | None:
         stmt = select(UserActiveThemeModel.theme_id).where(
             UserActiveThemeModel.user_id == user_id.value,
         )
@@ -151,9 +155,7 @@ class SqlAlchemyThemeRepository(ThemeRepository):
             return None
         return ThemeId(theme_id)
 
-    async def set_active_theme(
-        self, *, user_id: UserId, theme_id: ThemeId
-    ) -> None:
+    async def set_active_theme(self, *, user_id: UserId, theme_id: ThemeId) -> None:
         await self.session.execute(
             text(
                 "INSERT INTO user_active_themes (user_id, theme_id, updated_at) "
@@ -167,9 +169,7 @@ class SqlAlchemyThemeRepository(ThemeRepository):
 
     # ── Likes ──
 
-    async def has_user_liked(
-        self, *, user_id: UserId, theme_id: ThemeId
-    ) -> bool:
+    async def has_user_liked(self, *, user_id: UserId, theme_id: ThemeId) -> bool:
         stmt = select(ThemeLikeModel).where(
             ThemeLikeModel.user_id == user_id.value,
             ThemeLikeModel.theme_id == theme_id.value,
@@ -177,9 +177,7 @@ class SqlAlchemyThemeRepository(ThemeRepository):
         result = await self.session.execute(stmt)
         return result.scalar_one_or_none() is not None
 
-    async def add_like(
-        self, *, user_id: UserId, theme_id: ThemeId
-    ) -> None:
+    async def add_like(self, *, user_id: UserId, theme_id: ThemeId) -> None:
         model = ThemeLikeModel(
             user_id=user_id.value,
             theme_id=theme_id.value,
@@ -192,9 +190,7 @@ class SqlAlchemyThemeRepository(ThemeRepository):
             .values(like_count=ThemeModel.like_count + 1)
         )
 
-    async def remove_like(
-        self, *, user_id: UserId, theme_id: ThemeId
-    ) -> None:
+    async def remove_like(self, *, user_id: UserId, theme_id: ThemeId) -> None:
         stmt = delete(ThemeLikeModel).where(
             ThemeLikeModel.user_id == user_id.value,
             ThemeLikeModel.theme_id == theme_id.value,
@@ -211,13 +207,18 @@ class SqlAlchemyThemeRepository(ThemeRepository):
 
     @staticmethod
     def _to_entity(model: ThemeModel) -> Theme:
+        if model.slug is None:
+            raise ValueError(f"Theme {model.id} is missing a slug.")
+
         return Theme(
             id=ThemeId(model.id),
             name=ThemeName(model.name),
-            slug=ThemeSlug(model.slug),  # type: ignore[arg-type]
+            slug=ThemeSlug(model.slug),
             tokens=ThemeTokens(model.tokens),
             owner_user_id=UserId(model.owner_user_id) if model.owner_user_id else None,
-            description=ThemeDescription(model.description) if model.description else None,
+            description=ThemeDescription(model.description)
+            if model.description
+            else None,
             preview_image_url=model.preview_image_url,
             tags=model.tags,
             is_public=model.is_public,
@@ -225,7 +226,9 @@ class SqlAlchemyThemeRepository(ThemeRepository):
             is_featured=model.is_featured,
             download_count=model.download_count,
             like_count=model.like_count,
-            forked_from_id=ThemeId(model.forked_from_id) if model.forked_from_id else None,
+            forked_from_id=ThemeId(model.forked_from_id)
+            if model.forked_from_id
+            else None,
             created_at=model.created_at,
             updated_at=model.updated_at,
         )

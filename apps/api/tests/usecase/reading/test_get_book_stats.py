@@ -12,6 +12,9 @@ from app.domain.auth.value_objects import UserId
 from app.domain.books.entities import Book
 from app.domain.books.repositories import BookRepository
 from app.domain.books.value_objects import BookFilePath, BookTitle
+from app.domain.library_item.entities import LibraryItem
+from app.domain.library_item.repositories import LibraryItemRepository
+from app.domain.library_item.value_objects import LibrarySourceKind
 from app.domain.reading_stats.repositories import ReadingStatRepository
 
 
@@ -26,9 +29,15 @@ def stat_repo():
 
 
 @pytest.fixture
-def uow(book_repo, stat_repo):
+def library_item_repo():
+    return AsyncMock(spec=LibraryItemRepository)
+
+
+@pytest.fixture
+def uow(book_repo, stat_repo, library_item_repo):
     mock = AsyncMock(spec=AbstractUnitOfWork)
     mock.books = book_repo
+    mock.library_items = library_item_repo
     mock.reading_stats = stat_repo
     return mock
 
@@ -42,9 +51,21 @@ def book() -> Book:
     )
 
 
-async def test_returns_stats_for_owned_book(uow, book_repo, stat_repo, book):
+@pytest.fixture
+def library_item(book: Book) -> LibraryItem:
+    return LibraryItem.create(
+        user_id=book.owner_user_id,
+        book_id=book.id,
+        source_kind=LibrarySourceKind.UPLOAD,
+    )
+
+
+async def test_returns_stats_for_owned_book(
+    uow, book_repo, stat_repo, library_item_repo, book, library_item
+):
     book_repo.get_for_owner.return_value = book
-    stat_repo.list_for_book.return_value = []
+    library_item_repo.get_active_for_user_book.return_value = library_item
+    stat_repo.list_for_library_item.return_value = []
 
     result = await GetBookStats(uow).execute(
         book_id=book.id.value,
@@ -52,7 +73,7 @@ async def test_returns_stats_for_owned_book(uow, book_repo, stat_repo, book):
     )
 
     assert result == []
-    stat_repo.list_for_book.assert_awaited_once()
+    stat_repo.list_for_library_item.assert_awaited_once()
 
 
 async def test_book_not_found_raises(uow, book_repo):

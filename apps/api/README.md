@@ -2,34 +2,44 @@
 
 FastAPI backend for the FocusRead monorepo.
 
-As of 2026-04-12 this service is no longer a scaffold. It is the most complete part
-of the repo and already covers most backend work needed for the product described in
-[`../../docs/IDEA.md`](../../docs/IDEA.md).
+As of 2026-04-19 this service is no longer a scaffold, but it is still mid-refactor
+onto the canonical marketplace and library-item model described in
+[`../../docs/BACKEND_IMPLEMENTATION_PLAN.md`](../../docs/BACKEND_IMPLEMENTATION_PLAN.md).
 
-## Current Backend Progression
+## Current Backend Status
 
-Implemented end-to-end slices:
+Source of truth for rollout status is
+[`../../docs/BACKEND_IMPLEMENTATION_PLAN.md`](../../docs/BACKEND_IMPLEMENTATION_PLAN.md).
+At the time of writing:
+
+- `R1` persistence model and repository refactor is in place
+- `R2` domain split is mostly in place: `BookAsset`, `LibraryItem`,
+  `MarketplaceListing`, the slimmed `Book`, and the re-anchored reader and
+  organization aggregates all exist with tests
+- `R3` through `R6` are still pending, so workers, reader API orchestration,
+  organization/search callers, and admin/reporting still contain intentional
+  transitional book-centric entrypoints
+
+Implemented slices already present in code:
 
 - auth and RBAC: register, login, refresh, logout, current user, Google and Apple
   OAuth callbacks, role-based scopes, and admin role assignment/removal
 - book ingestion: PDF upload, local file storage, Celery processing, Redis-backed
-  progress events, chunk persistence, chunk caching, metadata CRUD, search, and
-  filtered library views
+  progress events, chunk persistence, chunk caching, and metadata CRUD
+- catalog and access aggregates: `books`, `book_assets`, `library_items`, and
+  `marketplace_listings` are modeled in the domain and persistence layers
 - reading flow: chunk resolution, session resume, progress upsert, per-book stats,
-  summary stats, and user book state preferences
+  summary stats, and bookmarks now anchored through `LibraryItem`
 - library organization: shelves, labels, bookmarks, contributors, favorites,
   archive, completed, and continue-reading helpers
 - admin curation: user listing plus system-label CRUD
 - supporting infrastructure: Alembic migrations, async SQLAlchemy repositories,
   Redis cache helpers, typed settings, middleware, and worker tasks
 
-The backend rollout described in
-[`../../docs/BACKEND_IMPLEMENTATION_PLAN.md`](../../docs/BACKEND_IMPLEMENTATION_PLAN.md)
-is largely reflected in code. The biggest remaining product work now sits outside
-this service: web/mobile clients, end-to-end deployment validation, and final
-polish. One visible backend gap is that book TOC storage exists, but the PDF worker
-still finishes with `toc_extracted = false`, so automatic TOC extraction is not yet
-fully wired into processing.
+The backend rollout is only partially complete today. The biggest remaining backend
+work is the caller migration tracked in `R3` through `R6`, plus unfinished worker
+behavior such as automatic TOC extraction: book TOC storage exists, but the PDF
+worker still finishes with `toc_extracted = false`.
 
 ## Stack Snapshot
 

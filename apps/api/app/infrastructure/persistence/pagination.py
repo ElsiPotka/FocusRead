@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import uuid
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 from sqlalchemy import asc, desc, func, select
 from sqlalchemy.orm import lazyload
@@ -11,79 +11,83 @@ if TYPE_CHECKING:
     from sqlalchemy.orm.attributes import InstrumentedAttribute
     from sqlalchemy.sql import Select
 
+    from app.types import PageMeta, PaginatedResult
+
 _MAX_OFFSET_PAGES = 10
 
 
-def _strip_loader_options(stmt: Select) -> Select:
+def _strip_loader_options[T](stmt: Select[tuple[T]]) -> Select[tuple[T]]:
     descriptions = getattr(stmt, "column_descriptions", [])
     if any(d.get("expr") is d.get("entity") for d in descriptions):
         return stmt.options(lazyload("*"))
     return stmt
 
 
-async def _get_total(session: AsyncSession, base_select: Select) -> int:
+async def _get_total[T](
+    session: AsyncSession,
+    base_select: Select[tuple[T]],
+) -> int:
     count_subquery = _strip_loader_options(base_select).order_by(None).alias()
     total_stmt = select(func.count()).select_from(count_subquery)
     return (await session.execute(total_stmt)).scalar() or 0
 
 
-def _empty_page(
+def _build_page_meta(
     page: int, per_page: int, total: int, total_pages: int
-) -> dict[str, Any]:
+) -> PageMeta:
     return {
-        "items": [],
-        "meta": {
-            "page": page,
-            "per_page": per_page,
-            "total": total,
-            "total_pages": total_pages,
-            "has_next": False,
-            "has_prev": page > 1,
-            "next_cursor": None,
-            "prev_cursor": None,
-        },
+        "page": page,
+        "per_page": per_page,
+        "total": total,
+        "total_pages": total_pages,
+        "has_next": page < total_pages,
+        "has_prev": page > 1,
+        "next_cursor": None,
+        "prev_cursor": None,
     }
 
 
-async def _offset_page(
+def _empty_page[T](
+    page: int, per_page: int, total: int, total_pages: int
+) -> PaginatedResult[T]:
+    meta = _build_page_meta(page, per_page, total, total_pages)
+    meta["has_next"] = False
+    return {
+        "items": [],
+        "meta": meta,
+    }
+
+
+async def _offset_page[T](
     session: AsyncSession,
-    base_select: Select,
-    id_column: InstrumentedAttribute,
+    base_select: Select[tuple[T]],
+    id_column: InstrumentedAttribute[uuid.UUID],
     *,
     page: int,
     per_page: int,
     total: int,
     total_pages: int,
     ascending: bool,
-) -> dict[str, Any]:
+) -> PaginatedResult[T]:
     order = asc(id_column) if ascending else desc(id_column)
     stmt = base_select.order_by(order).limit(per_page).offset((page - 1) * per_page)
     items = list((await session.execute(stmt)).unique().scalars().all())
 
     return {
         "items": items,
-        "meta": {
-            "page": page,
-            "per_page": per_page,
-            "total": total,
-            "total_pages": total_pages,
-            "has_next": page < total_pages,
-            "has_prev": page > 1,
-            "next_cursor": None,
-            "prev_cursor": None,
-        },
+        "meta": _build_page_meta(page, per_page, total, total_pages),
     }
 
 
-async def _keyset_page(
+async def _keyset_page[T](
     session: AsyncSession,
-    base_select: Select,
-    id_column: InstrumentedAttribute,
+    base_select: Select[tuple[T]],
+    id_column: InstrumentedAttribute[uuid.UUID],
     *,
     cursor_id: uuid.UUID,
     per_page: int,
     ascending: bool,
-) -> tuple[list[Any], bool, str | None, str | None]:
+) -> tuple[list[T], bool, str | None, str | None]:
     if ascending:
         stmt = base_select.where(id_column > cursor_id).order_by(asc(id_column))
     else:
@@ -102,17 +106,17 @@ async def _keyset_page(
     return items, has_more, next_cursor, prev_cursor
 
 
-async def paginate(
+async def paginate[T](
     session: AsyncSession,
-    base_select: Select,
-    id_column: InstrumentedAttribute,
+    base_select: Select[tuple[T]],
+    id_column: InstrumentedAttribute[uuid.UUID],
     *,
     page: int = 1,
     per_page: int = 20,
     ascending: bool = True,
     cursor: str | None = None,
     max_offset_pages: int = _MAX_OFFSET_PAGES,
-) -> dict[str, Any]:
+) -> PaginatedResult[T]:
     if page < 1:
         page = 1
     if per_page < 1:
@@ -163,16 +167,10 @@ async def paginate(
     if page - 1 <= max_offset_pages:
         prev_cursor = None
 
+    meta = _build_page_meta(page, per_page, total, total_pages)
+    meta["next_cursor"] = next_cursor
+    meta["prev_cursor"] = prev_cursor
     return {
         "items": items,
-        "meta": {
-            "page": page,
-            "per_page": per_page,
-            "total": total,
-            "total_pages": total_pages,
-            "has_next": page < total_pages,
-            "has_prev": page > 1,
-            "next_cursor": next_cursor,
-            "prev_cursor": prev_cursor,
-        },
+        "meta": meta,
     }

@@ -1,8 +1,11 @@
 from __future__ import annotations
 
-from typing import Any
+from typing import TYPE_CHECKING
 
 from pydantic import BaseModel, ConfigDict, Field
+
+if TYPE_CHECKING:
+    from app.types import JSONValue
 
 
 class BaseAPIResponse(BaseModel):
@@ -54,7 +57,10 @@ class ListResponse[T](BaseAPIResponse):
 class ErrorResponse(BaseAPIResponse):
     success: bool = Field(False, description="Always False for errors")
     error_code: str | None = Field(None, description="Machine-readable error code")
-    detail: Any | None = Field(None, description="Validation errors or debug trace")
+    detail: JSONValue | None = Field(
+        None,
+        description="Validation errors or debug trace",
+    )
 
     model_config = ConfigDict(
         json_schema_extra={

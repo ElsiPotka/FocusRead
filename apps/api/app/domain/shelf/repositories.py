@@ -4,10 +4,8 @@ from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from uuid import UUID
-
     from app.domain.auth.value_objects import UserId
-    from app.domain.books.value_objects import BookId
+    from app.domain.library_item.value_objects import LibraryItemId
     from app.domain.shelf.entities import Shelf
     from app.domain.shelf.value_objects import ShelfId
 
@@ -31,27 +29,31 @@ class ShelfRepository(ABC):
     async def delete(self, shelf_id: ShelfId) -> None: ...
 
     @abstractmethod
-    async def add_book(
-        self, *, shelf_id: ShelfId, book_id: BookId, sort_order: int
-    ) -> None: ...
-
-    @abstractmethod
-    async def remove_book(
-        self, *, shelf_id: ShelfId, book_id: BookId
-    ) -> None: ...
-
-    @abstractmethod
-    async def list_book_ids(self, *, shelf_id: ShelfId) -> list[UUID]: ...
-
-    @abstractmethod
-    async def reorder_shelves(
-        self, *, ordering: list[tuple[ShelfId, int]]
-    ) -> None: ...
-
-    @abstractmethod
-    async def reorder_books(
+    async def add_library_item(
         self,
         *,
         shelf_id: ShelfId,
-        ordering: list[tuple[BookId, int]],
+        library_item_id: LibraryItemId,
+        sort_order: int,
+    ) -> None: ...
+
+    @abstractmethod
+    async def remove_library_item(
+        self, *, shelf_id: ShelfId, library_item_id: LibraryItemId
+    ) -> None: ...
+
+    @abstractmethod
+    async def list_library_item_ids(
+        self, *, shelf_id: ShelfId
+    ) -> list[LibraryItemId]: ...
+
+    @abstractmethod
+    async def reorder_shelves(self, *, ordering: list[tuple[ShelfId, int]]) -> None: ...
+
+    @abstractmethod
+    async def reorder_items(
+        self,
+        *,
+        shelf_id: ShelfId,
+        ordering: list[tuple[LibraryItemId, int]],
     ) -> None: ...

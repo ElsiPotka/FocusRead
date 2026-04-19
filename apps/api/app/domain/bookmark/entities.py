@@ -6,17 +6,22 @@ from typing import TYPE_CHECKING
 from app.domain.bookmark.value_objects import BookmarkId, BookmarkLabel, BookmarkNote
 
 if TYPE_CHECKING:
-    from app.domain.auth.value_objects import UserId
-    from app.domain.books.value_objects import BookId
+    from app.domain.library_item.value_objects import LibraryItemId
 
 
 class Bookmark:
+    """A user-specific bookmark anchored to a `LibraryItem`.
+
+    Re-anchored from `(user_id, book_id)` to `library_item_id` since
+    bookmarks are a property of the user's readable copy, not the catalog
+    book. Revoking the LibraryItem cascades to its bookmarks.
+    """
+
     def __init__(
         self,
         *,
         id: BookmarkId,
-        user_id: UserId,
-        book_id: BookId,
+        library_item_id: LibraryItemId,
         word_index: int,
         chunk_index: int | None = None,
         page_number: int | None = None,
@@ -33,8 +38,7 @@ class Bookmark:
             raise ValueError("Bookmark page number must be positive.")
 
         self._id = id
-        self._user_id = user_id
-        self._book_id = book_id
+        self._library_item_id = library_item_id
         self._word_index = word_index
         self._chunk_index = chunk_index
         self._page_number = page_number
@@ -47,8 +51,7 @@ class Bookmark:
     def create(
         cls,
         *,
-        user_id: UserId,
-        book_id: BookId,
+        library_item_id: LibraryItemId,
         word_index: int,
         chunk_index: int | None = None,
         page_number: int | None = None,
@@ -57,8 +60,7 @@ class Bookmark:
     ) -> Bookmark:
         return cls(
             id=BookmarkId.generate(),
-            user_id=user_id,
-            book_id=book_id,
+            library_item_id=library_item_id,
             word_index=word_index,
             chunk_index=chunk_index,
             page_number=page_number,
@@ -71,12 +73,8 @@ class Bookmark:
         return self._id
 
     @property
-    def user_id(self) -> UserId:
-        return self._user_id
-
-    @property
-    def book_id(self) -> BookId:
-        return self._book_id
+    def library_item_id(self) -> LibraryItemId:
+        return self._library_item_id
 
     @property
     def word_index(self) -> int:

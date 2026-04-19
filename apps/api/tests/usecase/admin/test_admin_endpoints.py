@@ -31,7 +31,7 @@ class TestGetUserDetail:
     async def test_returns_profile(self, uow, user_repo):
         uid = uuid4()
         user = _make_user(user_id=uid)
-        profile = UserProfile(user=user, accounts=[], roles=[])
+        profile = UserProfile(user=user, accounts=(), roles=())
         user_repo.get_profile.return_value = profile
 
         result = await GetUserDetail(uow).execute(user_id=uid)

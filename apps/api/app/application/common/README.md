@@ -12,10 +12,13 @@ Shared application-level contracts and errors live here.
 `AbstractUnitOfWork` is already the shared composition surface for the current backend
 feature set. It exposes repositories for:
 
-- books, book chunks, and TOC entries
-- bookmarks, contributors, labels, shelves, and user book state
-- reading sessions and reading stats
+- books, book assets, library items, and marketplace listings
+- book chunks, TOC entries, bookmarks, reading sessions, and reading stats
+- contributors, labels, shelves, and themes
 - users, roles, accounts, sessions, and JWT signing keys
+
+`user_book_states` is no longer part of the contract; per-user reading state now
+lives on `LibraryItem`.
 
 ## Unit Of Work Rules
 

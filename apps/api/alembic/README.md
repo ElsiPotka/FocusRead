@@ -4,20 +4,22 @@ This folder contains the database migration environment for the API.
 
 ## Current Progress
 
-The migration history now covers the main backend schema delivered so far:
+The migration history covers the schema reset toward the current backend model:
 
 - users, accounts, sessions, JWT signing keys, roles, and user-role links
-- books and book chunks
-- reading sessions and reading stats
-- user book state
+- canonical `books`, `book_assets`, `marketplace_listings`, and `library_items`
+- asset-scoped book chunks and TOC entries
+- library-item-scoped bookmarks, reading sessions, and reading stats
 - contributors
-- shelves
-- labels and seeded system labels
-- book TOC entries
-- bookmarks
+- shelves via `shelf_items`
+- labels via `library_labels` and `library_item_labels`
+- themes and theme-like tables
+- removal of `user_book_state` in revision `0031`
 
-In practice, the migration set now matches the implemented backend feature slices much
-more than a scaffold or partial plan.
+This matches the active refactor target in
+[`../../docs/BACKEND_IMPLEMENTATION_PLAN.md`](../../docs/BACKEND_IMPLEMENTATION_PLAN.md),
+not a finished application rollout. Application-layer cutover continues in later
+plan phases.
 
 ## What Lives Here
 

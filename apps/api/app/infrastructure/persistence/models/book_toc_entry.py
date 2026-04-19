@@ -10,15 +10,15 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.infrastructure.persistence.models.base_model import BaseModel
 
 if TYPE_CHECKING:
-    from app.infrastructure.persistence.models.book import BookModel
+    from app.infrastructure.persistence.models.book_asset import BookAssetModel
 
 
 class BookTOCEntryModel(BaseModel):
     __tablename__ = "book_toc_entries"
 
-    book_id: Mapped[uuid.UUID] = mapped_column(
+    book_asset_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
-        ForeignKey("books.id", ondelete="CASCADE"),
+        ForeignKey("book_assets.id", ondelete="CASCADE"),
         nullable=False,
     )
     parent_id: Mapped[uuid.UUID | None] = mapped_column(
@@ -32,7 +32,7 @@ class BookTOCEntryModel(BaseModel):
     page_start: Mapped[int | None] = mapped_column(Integer, nullable=True)
     start_word_index: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
-    book: Mapped[BookModel] = relationship("BookModel", lazy="raise")
+    book_asset: Mapped[BookAssetModel] = relationship("BookAssetModel", lazy="raise")
     parent: Mapped[BookTOCEntryModel | None] = relationship(
         "BookTOCEntryModel",
         remote_side=lambda: [BookTOCEntryModel.id],
@@ -56,5 +56,5 @@ class BookTOCEntryModel(BaseModel):
             "start_word_index IS NULL OR start_word_index >= 0",
             name="book_toc_entries_start_word_non_negative",
         ),
-        Index("ix_book_toc_entries_book_order", "book_id", "order_index"),
+        Index("ix_book_toc_entries_asset_order", "book_asset_id", "order_index"),
     )

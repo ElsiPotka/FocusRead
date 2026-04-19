@@ -23,10 +23,10 @@ class BookTOCEntryResponse(BaseModel):
     updated_at: datetime
 
     @staticmethod
-    def from_entity(entry: BookTOCEntry) -> BookTOCEntryResponse:
+    def from_entity(entry: BookTOCEntry, *, book_id: UUID) -> BookTOCEntryResponse:
         return BookTOCEntryResponse(
             id=entry.id.value,
-            book_id=entry.book_id.value,
+            book_id=book_id,
             title=entry.title.value,
             level=entry.level,
             order_index=entry.order_index,

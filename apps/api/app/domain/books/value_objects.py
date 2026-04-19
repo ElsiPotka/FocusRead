@@ -4,6 +4,15 @@ from dataclasses import dataclass
 from enum import StrEnum
 from uuid import UUID, uuid7
 
+from app.domain.book_asset.value_objects import (
+    OriginalFilename,
+    PageCount,
+    ProcessingError,
+    StorageKey,
+    TotalChunks,
+    WordCount,
+)
+
 
 @dataclass(frozen=True, slots=True)
 class BookId:
@@ -78,19 +87,6 @@ class BookLanguage:
 
 
 @dataclass(frozen=True, slots=True)
-class BookSourceFilename:
-    value: str
-
-    def __post_init__(self) -> None:
-        normalized = self.value.strip()
-        if not normalized:
-            raise ValueError("Book source filename cannot be blank.")
-        if len(normalized) > 255:
-            raise ValueError("Book source filename must be 255 characters or less.")
-        object.__setattr__(self, "value", normalized)
-
-
-@dataclass(frozen=True, slots=True)
 class BookCoverImagePath:
     value: str
 
@@ -125,54 +121,10 @@ class BookPublishedYear:
             raise ValueError("Book published year must be between 1 and 9999.")
 
 
-@dataclass(frozen=True, slots=True)
-class BookPageCount:
-    value: int
-
-    def __post_init__(self) -> None:
-        if self.value <= 0:
-            raise ValueError("Book page count must be greater than zero.")
-
-
-@dataclass(frozen=True, slots=True)
-class BookWordCount:
-    value: int
-
-    def __post_init__(self) -> None:
-        if self.value < 0:
-            raise ValueError("Book word count cannot be negative.")
-
-
-@dataclass(frozen=True, slots=True)
-class BookTotalChunks:
-    value: int
-
-    def __post_init__(self) -> None:
-        if self.value < 0:
-            raise ValueError("Book total chunks cannot be negative.")
-
-
-@dataclass(frozen=True, slots=True)
-class BookProcessingError:
-    value: str
-
-    def __post_init__(self) -> None:
-        normalized = self.value.strip()
-        if not normalized:
-            raise ValueError("Book processing error cannot be blank.")
-        if len(normalized) > 5000:
-            raise ValueError("Book processing error must be 5000 characters or less.")
-        object.__setattr__(self, "value", normalized)
-
-
-@dataclass(frozen=True, slots=True)
-class BookFilePath:
-    value: str
-
-    def __post_init__(self) -> None:
-        normalized = self.value.strip()
-        if not normalized:
-            raise ValueError("Book file path is required.")
-        if len(normalized) > 2048:
-            raise ValueError("Book file path must be 2048 characters or less.")
-        object.__setattr__(self, "value", normalized)
+# Backward-compatible aliases for the legacy upload/processing shape.
+BookFilePath = StorageKey
+BookSourceFilename = OriginalFilename
+BookPageCount = PageCount
+BookWordCount = WordCount
+BookTotalChunks = TotalChunks
+BookProcessingError = ProcessingError

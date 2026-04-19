@@ -30,9 +30,15 @@ class UnassignLabel:
         )
         if book is None:
             raise NotFoundError("Book not found")
-
-        await self._uow.labels.unassign_from_book(
-            label_id=LabelId(label_id),
+        library_item = await self._uow.library_items.get_active_for_user_book(
+            user_id=UserId(user_id),
             book_id=book.id,
+        )
+        if library_item is None:
+            raise NotFoundError("Library item not found")
+
+        await self._uow.labels.unassign_from_library_item(
+            label_id=LabelId(label_id),
+            library_item_id=library_item.id,
         )
         await self._uow.commit()

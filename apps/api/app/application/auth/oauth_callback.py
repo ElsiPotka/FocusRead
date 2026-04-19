@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, NotRequired, TypedDict
 
 from app.application.auth.scopes import build_access_token_scopes
 from app.domain.auth.entities import Account, Session, User
@@ -21,6 +21,22 @@ if TYPE_CHECKING:
     from app.infrastructure.auth.session_service import SessionService
 
 
+class OAuthUserInfo(TypedDict):
+    sub: NotRequired[str]
+    id: NotRequired[str]
+    email: NotRequired[str]
+    given_name: NotRequired[str]
+    name: NotRequired[str]
+    family_name: NotRequired[str]
+
+
+class OAuthTokens(TypedDict):
+    access_token: NotRequired[str]
+    refresh_token: NotRequired[str]
+    id_token: NotRequired[str]
+    scope: NotRequired[str]
+
+
 class HandleOAuthCallback:
     def __init__(
         self,
@@ -36,8 +52,8 @@ class HandleOAuthCallback:
         self,
         *,
         provider: str,
-        oauth_user_info: dict[str, Any],
-        oauth_tokens: dict[str, Any],
+        oauth_user_info: OAuthUserInfo,
+        oauth_tokens: OAuthTokens,
         user_agent: str | None = None,
         ip_address: str | None = None,
     ) -> tuple[User, str, str]:

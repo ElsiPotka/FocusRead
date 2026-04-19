@@ -50,7 +50,11 @@ async def create_bookmark(
     )
     return APIResponse(
         success=True,
-        data=BookmarkResponse.from_entity(bookmark),
+        data=BookmarkResponse.from_entity(
+            bookmark,
+            user_id=current_user.id.value,
+            book_id=book_id,
+        ),
         message="Bookmark created",
     )
 
@@ -66,7 +70,14 @@ async def list_bookmarks(
         book_id=book_id,
         user_id=current_user.id.value,
     )
-    data = [BookmarkResponse.from_entity(b) for b in bookmarks]
+    data = [
+        BookmarkResponse.from_entity(
+            b,
+            user_id=current_user.id.value,
+            book_id=book_id,
+        )
+        for b in bookmarks
+    ]
     return ListResponse(
         success=True,
         data=data,
@@ -99,7 +110,11 @@ async def update_bookmark(
     )
     return APIResponse(
         success=True,
-        data=BookmarkResponse.from_entity(bookmark),
+        data=BookmarkResponse.from_entity(
+            bookmark,
+            user_id=current_user.id.value,
+            book_id=book_id,
+        ),
         message="Bookmark updated",
     )
 

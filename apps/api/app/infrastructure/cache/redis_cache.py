@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import gzip
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, cast
 
 import orjson
 
@@ -9,6 +9,8 @@ from app.infrastructure.config.settings import settings
 
 if TYPE_CHECKING:
     from redis.asyncio import Redis
+
+    from app.types import JSONValue
 
 COMPRESSED_PAYLOAD_PREFIX = b"gz:"
 
@@ -36,7 +38,7 @@ class RedisCache:
             ex=ttl_seconds or settings.CACHE_DEFAULT_TTL_SECONDS,
         )
 
-    async def get_json(self, key: str) -> Any | None:
+    async def get_json(self, key: str) -> JSONValue | None:
         payload = await self.get_bytes(key)
         if payload is None:
             return None
@@ -44,12 +46,12 @@ class RedisCache:
         if payload.startswith(COMPRESSED_PAYLOAD_PREFIX):
             payload = gzip.decompress(payload.removeprefix(COMPRESSED_PAYLOAD_PREFIX))
 
-        return orjson.loads(payload)
+        return cast("JSONValue", orjson.loads(payload))
 
     async def set_json(
         self,
         key: str,
-        value: Any,
+        value: object,
         *,
         ttl_seconds: int | None = None,
         compress: bool = False,

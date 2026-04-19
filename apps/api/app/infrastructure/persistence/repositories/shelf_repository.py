@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING
 from sqlalchemy import case, delete, select, update
 
 from app.domain.auth.value_objects import UserId
-from app.domain.books.value_objects import BookId  # noqa: TC001
+from app.domain.library_item.value_objects import LibraryItemId
 from app.domain.shelf.entities import Shelf
 from app.domain.shelf.repositories import ShelfRepository
 from app.domain.shelf.value_objects import (
@@ -15,11 +15,9 @@ from app.domain.shelf.value_objects import (
     ShelfId,
     ShelfName,
 )
-from app.infrastructure.persistence.models.shelf import ShelfBookModel, ShelfModel
+from app.infrastructure.persistence.models.shelf import ShelfItemModel, ShelfModel
 
 if TYPE_CHECKING:
-    from uuid import UUID
-
     from sqlalchemy.ext.asyncio import AsyncSession
 
 
@@ -80,77 +78,83 @@ class SqlAlchemyShelfRepository(ShelfRepository):
             .order_by(ShelfModel.sort_order)
         )
         result = await self.session.execute(stmt)
-        return [self._to_entity(m) for m in result.scalars().all()]
+        return [self._to_entity(model) for model in result.scalars().all()]
 
     async def delete(self, shelf_id: ShelfId) -> None:
         stmt = delete(ShelfModel).where(ShelfModel.id == shelf_id.value)
         await self.session.execute(stmt)
 
-    async def add_book(
-        self, *, shelf_id: ShelfId, book_id: BookId, sort_order: int
+    async def add_library_item(
+        self,
+        *,
+        shelf_id: ShelfId,
+        library_item_id: LibraryItemId,
+        sort_order: int,
     ) -> None:
-        model = ShelfBookModel(
+        model = ShelfItemModel(
             shelf_id=shelf_id.value,
-            book_id=book_id.value,
+            library_item_id=library_item_id.value,
             sort_order=sort_order,
         )
         self.session.add(model)
 
-    async def remove_book(
-        self, *, shelf_id: ShelfId, book_id: BookId
+    async def remove_library_item(
+        self, *, shelf_id: ShelfId, library_item_id: LibraryItemId
     ) -> None:
-        stmt = delete(ShelfBookModel).where(
-            ShelfBookModel.shelf_id == shelf_id.value,
-            ShelfBookModel.book_id == book_id.value,
+        stmt = delete(ShelfItemModel).where(
+            ShelfItemModel.shelf_id == shelf_id.value,
+            ShelfItemModel.library_item_id == library_item_id.value,
         )
         await self.session.execute(stmt)
 
-    async def list_book_ids(self, *, shelf_id: ShelfId) -> list[UUID]:
+    async def list_library_item_ids(self, *, shelf_id: ShelfId) -> list[LibraryItemId]:
         stmt = (
-            select(ShelfBookModel.book_id)
-            .where(ShelfBookModel.shelf_id == shelf_id.value)
-            .order_by(ShelfBookModel.sort_order)
+            select(ShelfItemModel.library_item_id)
+            .where(ShelfItemModel.shelf_id == shelf_id.value)
+            .order_by(ShelfItemModel.sort_order)
         )
         result = await self.session.execute(stmt)
-        return list(result.scalars().all())
+        return [LibraryItemId(value) for value in result.scalars().all()]
 
-    async def reorder_shelves(
-        self, *, ordering: list[tuple[ShelfId, int]]
-    ) -> None:
+    async def reorder_shelves(self, *, ordering: list[tuple[ShelfId, int]]) -> None:
         if not ordering:
             return
-        ids = [sid.value for sid, _ in ordering]
+        ids = [shelf_id.value for shelf_id, _ in ordering]
         stmt = (
             update(ShelfModel)
             .where(ShelfModel.id.in_(ids))
             .values(
                 sort_order=case(
-                    {sid.value: so for sid, so in ordering},
+                    {shelf_id.value: sort_order for shelf_id, sort_order in ordering},
                     value=ShelfModel.id,
                 )
             )
         )
         await self.session.execute(stmt)
 
-    async def reorder_books(
+    async def reorder_items(
         self,
         *,
         shelf_id: ShelfId,
-        ordering: list[tuple[BookId, int]],
+        ordering: list[tuple[LibraryItemId, int]],
     ) -> None:
         if not ordering:
             return
-        book_ids = [bid.value for bid, _ in ordering]
+
+        sort_order_map = {
+            library_item_id.value: sort_order
+            for library_item_id, sort_order in ordering
+        }
         stmt = (
-            update(ShelfBookModel)
+            update(ShelfItemModel)
             .where(
-                ShelfBookModel.shelf_id == shelf_id.value,
-                ShelfBookModel.book_id.in_(book_ids),
+                ShelfItemModel.shelf_id == shelf_id.value,
+                ShelfItemModel.library_item_id.in_(list(sort_order_map.keys())),
             )
             .values(
                 sort_order=case(
-                    {bid.value: so for bid, so in ordering},
-                    value=ShelfBookModel.book_id,
+                    sort_order_map,
+                    value=ShelfItemModel.library_item_id,
                 )
             )
         )
@@ -162,7 +166,9 @@ class SqlAlchemyShelfRepository(ShelfRepository):
             id=ShelfId(model.id),
             user_id=UserId(model.user_id),
             name=ShelfName(model.name),
-            description=ShelfDescription(model.description) if model.description else None,
+            description=ShelfDescription(model.description)
+            if model.description
+            else None,
             color=ShelfColor(model.color) if model.color else None,
             icon=ShelfIcon(model.icon) if model.icon else None,
             is_pinned=model.is_pinned,

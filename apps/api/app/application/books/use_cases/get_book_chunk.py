@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, TypedDict, TypeGuard
 from uuid import UUID
 
 from app.application.common.errors import NotFoundError
@@ -19,9 +19,42 @@ from app.infrastructure.cache.keys import book_chunk_key
 
 if TYPE_CHECKING:
     from app.application.common.unit_of_work import AbstractUnitOfWork
+    from app.domain.book_asset.value_objects import BookAssetId
     from app.infrastructure.cache.redis_cache import RedisCache
+    from app.types import JSONValue
 
 CHUNK_CACHE_TTL_SECONDS = 1800  # 30 minutes
+
+
+class CachedBookChunk(TypedDict):
+    id: str
+    book_id: str
+    chunk_index: int
+    start_word_index: int
+    word_data: list[list[object]]
+    word_count: int
+    page_start: int | None
+    page_end: int | None
+    created_at: str
+    updated_at: str
+
+
+def _is_cached_book_chunk(value: JSONValue) -> TypeGuard[CachedBookChunk]:
+    return (
+        isinstance(value, dict)
+        and isinstance(value.get("id"), str)
+        and isinstance(value.get("book_id"), str)
+        and isinstance(value.get("chunk_index"), int)
+        and isinstance(value.get("start_word_index"), int)
+        and isinstance(value.get("word_data"), list)
+        and isinstance(value.get("word_count"), int)
+        and (
+            value.get("page_start") is None or isinstance(value.get("page_start"), int)
+        )
+        and (value.get("page_end") is None or isinstance(value.get("page_end"), int))
+        and isinstance(value.get("created_at"), str)
+        and isinstance(value.get("updated_at"), str)
+    )
 
 
 class GetBookChunk:
@@ -48,14 +81,14 @@ class GetBookChunk:
         cache_key = book_chunk_key(str(book_id), chunk_index)
         cached = await self._cache.get_json(cache_key)
 
-        if cached is not None:
+        if cached is not None and _is_cached_book_chunk(cached):
             # Cache hit — refresh TTL and return without DB query
             await self._cache.touch(cache_key, ttl_seconds=CHUNK_CACHE_TTL_SECONDS)
-            return _from_cache(cached)
+            return _from_cache(cached, book_asset_id=book.primary_asset_id)
 
         # 3. Cache miss — fetch from DB
         chunk = await self._uow.book_chunks.get_by_index(
-            book_id=BookId(book_id),
+            book_asset_id=book.primary_asset_id,
             chunk_index=ChunkIndex(chunk_index),
         )
         if chunk is None:
@@ -64,7 +97,7 @@ class GetBookChunk:
         # 4. Populate cache with full entity data
         await self._cache.set_json(
             cache_key,
-            _to_cache(chunk),
+            _to_cache(chunk, book_id=book.id),
             compress=True,
             ttl_seconds=CHUNK_CACHE_TTL_SECONDS,
         )
@@ -72,10 +105,10 @@ class GetBookChunk:
         return chunk
 
 
-def _to_cache(chunk: BookChunk) -> dict[str, Any]:
+def _to_cache(chunk: BookChunk, *, book_id: BookId) -> CachedBookChunk:
     return {
         "id": str(chunk.id.value),
-        "book_id": str(chunk.book_id.value),
+        "book_id": str(book_id.value),
         "chunk_index": chunk.chunk_index.value,
         "start_word_index": chunk.start_word_index.value,
         "word_data": chunk.word_data.value,
@@ -87,10 +120,10 @@ def _to_cache(chunk: BookChunk) -> dict[str, Any]:
     }
 
 
-def _from_cache(data: dict[str, Any]) -> BookChunk:
+def _from_cache(data: CachedBookChunk, *, book_asset_id: BookAssetId) -> BookChunk:
     return BookChunk(
         id=BookChunkId(UUID(data["id"])),
-        book_id=BookId(UUID(data["book_id"])),
+        book_asset_id=book_asset_id,
         chunk_index=ChunkIndex(data["chunk_index"]),
         start_word_index=StartWordIndex(data["start_word_index"]),
         word_data=ChunkWordData(data["word_data"]),

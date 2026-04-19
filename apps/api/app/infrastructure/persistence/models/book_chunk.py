@@ -10,15 +10,15 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.infrastructure.persistence.models.base_model import BaseModel
 
 if TYPE_CHECKING:
-    from app.infrastructure.persistence.models.book import BookModel
+    from app.infrastructure.persistence.models.book_asset import BookAssetModel
 
 
 class BookChunkModel(BaseModel):
     __tablename__ = "book_chunks"
 
-    book_id: Mapped[uuid.UUID] = mapped_column(
+    book_asset_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
-        ForeignKey("books.id", ondelete="CASCADE"),
+        ForeignKey("book_assets.id", ondelete="CASCADE"),
         nullable=False,
     )
     chunk_index: Mapped[int] = mapped_column(Integer, nullable=False)
@@ -28,13 +28,13 @@ class BookChunkModel(BaseModel):
     page_start: Mapped[int | None] = mapped_column(Integer, nullable=True)
     page_end: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
-    book: Mapped[BookModel] = relationship("BookModel", lazy="raise")
+    book_asset: Mapped[BookAssetModel] = relationship("BookAssetModel", lazy="raise")
 
     __table_args__ = (
         UniqueConstraint(
-            "book_id",
+            "book_asset_id",
             "chunk_index",
-            name="uq_book_chunks_book_id_chunk_index",
+            name="uq_book_chunks_book_asset_id_chunk_index",
         ),
         CheckConstraint(
             "chunk_index >= 0",
@@ -56,5 +56,5 @@ class BookChunkModel(BaseModel):
             "page_end IS NULL OR page_end > 0",
             name="book_chunks_page_end_positive",
         ),
-        Index("ix_book_chunks_book_start_word", "book_id", "start_word_index"),
+        Index("ix_book_chunks_asset_start_word", "book_asset_id", "start_word_index"),
     )

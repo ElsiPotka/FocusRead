@@ -30,9 +30,15 @@ class RemoveBookFromShelf:
         )
         if shelf is None:
             raise NotFoundError("Shelf not found")
-
-        await self._uow.shelves.remove_book(
-            shelf_id=shelf.id,
+        library_item = await self._uow.library_items.get_active_for_user_book(
+            user_id=UserId(user_id),
             book_id=BookId(book_id),
+        )
+        if library_item is None:
+            raise NotFoundError("Library item not found")
+
+        await self._uow.shelves.remove_library_item(
+            shelf_id=shelf.id,
+            library_item_id=library_item.id,
         )
         await self._uow.commit()

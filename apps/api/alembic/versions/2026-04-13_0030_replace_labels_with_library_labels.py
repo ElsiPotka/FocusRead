@@ -31,7 +31,7 @@ def upgrade() -> None:
     op.create_table(
         "library_labels",
         sa.Column("id", sa.UUID(), server_default=sa.text("uuidv7()"), nullable=False),
-        sa.Column("user_id", sa.UUID(), nullable=False),
+        sa.Column("user_id", sa.UUID(), nullable=True),
         sa.Column("name", sa.String(length=255), nullable=False),
         sa.Column(
             "slug",
@@ -40,6 +40,12 @@ def upgrade() -> None:
             comment="URL-friendly identifier",
         ),
         sa.Column("color", sa.String(length=32), nullable=True),
+        sa.Column(
+            "is_system",
+            sa.Boolean(),
+            nullable=False,
+            server_default=sa.text("false"),
+        ),
         sa.Column(
             "version",
             sa.Integer(),
@@ -59,6 +65,10 @@ def upgrade() -> None:
             server_default=sa.text("now()"),
             nullable=False,
         ),
+        sa.CheckConstraint(
+            "(is_system AND user_id IS NULL) OR ((NOT is_system) AND user_id IS NOT NULL)",
+            name=op.f("ck_library_labels_owner_mode_valid"),
+        ),
         sa.ForeignKeyConstraint(
             ["user_id"],
             ["users.id"],
@@ -69,6 +79,18 @@ def upgrade() -> None:
         sa.UniqueConstraint("user_id", "slug", name=op.f("uq_library_labels_user_id_slug")),
     )
     op.create_index("ix_library_labels_slug", "library_labels", ["slug"])
+    op.create_index(
+        "ix_library_labels_user_slug",
+        "library_labels",
+        ["user_id", "slug"],
+    )
+    op.create_index(
+        "ix_library_labels_system_slug",
+        "library_labels",
+        ["slug"],
+        unique=True,
+        postgresql_where=sa.text("is_system"),
+    )
     create_search_vector_index(op, table_name="library_labels")
 
     op.create_table(
@@ -172,5 +194,7 @@ def downgrade() -> None:
 
     op.drop_table("library_item_labels")
     drop_search_vector_index(op, table_name="library_labels")
+    op.drop_index("ix_library_labels_system_slug", table_name="library_labels")
+    op.drop_index("ix_library_labels_user_slug", table_name="library_labels")
     op.drop_index("ix_library_labels_slug", table_name="library_labels")
     op.drop_table("library_labels")

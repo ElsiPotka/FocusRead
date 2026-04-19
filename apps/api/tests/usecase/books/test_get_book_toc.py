@@ -47,20 +47,20 @@ def book() -> Book:
 async def test_get_book_toc_returns_entries(uow, book_repo, toc_repo, book):
     entries = [
         BookTOCEntry.create(
-            book_id=book.id,
+            book_asset_id=book.primary_asset_id,
             title=BookTOCTitle("Chapter 1"),
             level=1,
             order_index=0,
         ),
         BookTOCEntry.create(
-            book_id=book.id,
+            book_asset_id=book.primary_asset_id,
             title=BookTOCTitle("Chapter 2"),
             level=1,
             order_index=1,
         ),
     ]
     book_repo.get_for_owner.return_value = book
-    toc_repo.list_for_book.return_value = entries
+    toc_repo.list_for_asset.return_value = entries
 
     result = await GetBookTOC(uow).execute(
         book_id=book.id.value,
@@ -70,12 +70,12 @@ async def test_get_book_toc_returns_entries(uow, book_repo, toc_repo, book):
     assert len(result) == 2
     assert result[0].title.value == "Chapter 1"
     assert result[1].title.value == "Chapter 2"
-    toc_repo.list_for_book.assert_awaited_once()
+    toc_repo.list_for_asset.assert_awaited_once()
 
 
 async def test_get_book_toc_returns_empty_list(uow, book_repo, toc_repo, book):
     book_repo.get_for_owner.return_value = book
-    toc_repo.list_for_book.return_value = []
+    toc_repo.list_for_asset.return_value = []
 
     result = await GetBookTOC(uow).execute(
         book_id=book.id.value,

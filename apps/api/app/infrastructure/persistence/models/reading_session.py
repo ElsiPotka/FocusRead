@@ -11,21 +11,15 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.infrastructure.persistence.models.base_model import BaseModel
 
 if TYPE_CHECKING:
-    from app.infrastructure.persistence.models.book import BookModel
-    from app.infrastructure.persistence.models.user import UserModel
+    from app.infrastructure.persistence.models.library_item import LibraryItemModel
 
 
 class ReadingSessionModel(BaseModel):
     __tablename__ = "reading_sessions"
 
-    user_id: Mapped[uuid.UUID] = mapped_column(
+    library_item_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
-        ForeignKey("users.id", ondelete="CASCADE"),
-        nullable=False,
-    )
-    book_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True),
-        ForeignKey("books.id", ondelete="CASCADE"),
+        ForeignKey("library_items.id", ondelete="CASCADE"),
         nullable=False,
     )
     current_word_index: Mapped[int] = mapped_column(
@@ -44,14 +38,15 @@ class ReadingSessionModel(BaseModel):
         DateTime(timezone=True), nullable=False
     )
 
-    user: Mapped[UserModel] = relationship("UserModel", lazy="raise")
-    book: Mapped[BookModel] = relationship("BookModel", lazy="raise")
+    library_item: Mapped[LibraryItemModel] = relationship(
+        "LibraryItemModel",
+        lazy="raise",
+    )
 
     __table_args__ = (
         UniqueConstraint(
-            "user_id",
-            "book_id",
-            name="uq_reading_sessions_user_id_book_id",
+            "library_item_id",
+            name="uq_reading_sessions_library_item_id",
         ),
         CheckConstraint(
             "current_word_index >= 0",

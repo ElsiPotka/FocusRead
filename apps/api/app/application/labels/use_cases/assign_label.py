@@ -37,9 +37,15 @@ class AssignLabel:
         )
         if label is None:
             raise NotFoundError("Label not found")
-
-        await self._uow.labels.assign_to_book(
-            label_id=label.id,
+        library_item = await self._uow.library_items.get_active_for_user_book(
+            user_id=UserId(user_id),
             book_id=book.id,
+        )
+        if library_item is None:
+            raise NotFoundError("Library item not found")
+
+        await self._uow.labels.assign_to_library_item(
+            label_id=label.id,
+            library_item_id=library_item.id,
         )
         await self._uow.commit()

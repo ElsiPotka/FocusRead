@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, TypedDict, TypeGuard, cast
 
 import jwt
 from cryptography.hazmat.primitives import serialization
@@ -13,9 +13,44 @@ from app.infrastructure.config.settings import settings
 if TYPE_CHECKING:
     from app.application.common.unit_of_work import AbstractUnitOfWork
     from app.infrastructure.cache.redis_cache import RedisCache
+    from app.types import JSONValue
 
 _ALGORITHM = "RS256"
 _KEY_PAIR_CACHE_KEY = build_cache_key("auth", "jwt", "active_key_pair")
+
+
+class KeyPairCacheEntry(TypedDict):
+    private_key: str
+    public_key: str
+
+
+class DecodedAccessTokenPayload(TypedDict):
+    sub: str
+    scope: str
+    iat: int
+    exp: int
+
+
+def _is_key_pair_cache_entry(value: JSONValue) -> TypeGuard[KeyPairCacheEntry]:
+    return (
+        isinstance(value, dict)
+        and isinstance(value.get("private_key"), str)
+        and isinstance(value.get("public_key"), str)
+    )
+
+
+def _is_decoded_access_token_payload(
+    value: object,
+) -> TypeGuard[DecodedAccessTokenPayload]:
+    if not isinstance(value, dict):
+        return False
+    payload = cast("dict[str, object]", value)
+    return (
+        isinstance(payload.get("sub"), str)
+        and isinstance(payload.get("scope"), str)
+        and isinstance(payload.get("iat"), int)
+        and isinstance(payload.get("exp"), int)
+    )
 
 
 class JWTService:
@@ -24,7 +59,7 @@ class JWTService:
 
     async def get_or_create_key_pair(self, uow: AbstractUnitOfWork) -> tuple[str, str]:
         cached = await self._cache.get_json(_KEY_PAIR_CACHE_KEY)
-        if cached is not None:
+        if cached is not None and _is_key_pair_cache_entry(cached):
             return (cached["private_key"], cached["public_key"])
 
         key_pair = await uow.jwt_signing_keys.get_active_key_pair()
@@ -78,7 +113,7 @@ class JWTService:
         scopes: list[str] | None = None,
     ) -> str:
         now = datetime.now(UTC)
-        payload: dict[str, Any] = {
+        payload: dict[str, str | datetime] = {
             "sub": user_id,
             "scope": " ".join(scopes or []),
             "iat": now,
@@ -86,5 +121,10 @@ class JWTService:
         }
         return jwt.encode(payload, private_key, algorithm=_ALGORITHM)
 
-    def decode_access_token(self, token: str, public_key: str) -> dict[str, Any]:
-        return jwt.decode(token, public_key, algorithms=[_ALGORITHM])
+    def decode_access_token(
+        self, token: str, public_key: str
+    ) -> DecodedAccessTokenPayload:
+        payload = jwt.decode(token, public_key, algorithms=[_ALGORITHM])
+        if not _is_decoded_access_token_payload(payload):
+            raise jwt.InvalidTokenError("Invalid access token payload")
+        return payload

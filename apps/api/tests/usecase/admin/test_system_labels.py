@@ -95,6 +95,7 @@ class TestUpdateSystemLabel:
             color="#FF0000",
         )
 
+        assert result.color is not None
         assert result.color.value == "#FF0000"
 
     @pytest.mark.asyncio

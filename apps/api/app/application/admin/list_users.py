@@ -1,9 +1,11 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from app.application.common.unit_of_work import AbstractUnitOfWork
+    from app.domain.user.profile import UserProfile
+    from app.types import PaginatedResult
 
 
 class ListUsersForAdmin:
@@ -16,7 +18,7 @@ class ListUsersForAdmin:
         page: int,
         per_page: int,
         cursor: str | None = None,
-    ) -> dict[str, Any]:
+    ) -> PaginatedResult[UserProfile]:
         return await self._uow.users.paginate_profiles(
             page=page,
             per_page=per_page,

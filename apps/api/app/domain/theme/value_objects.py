@@ -132,6 +132,4 @@ class ThemeTokens:
             if not isinstance(val, str):
                 raise TypeError(f"Token value for '{key}' must be a string.")
             if _DANGEROUS_PATTERNS.search(val):
-                raise ValueError(
-                    f"Token '{key}' contains a disallowed CSS pattern."
-                )
+                raise ValueError(f"Token '{key}' contains a disallowed CSS pattern.")

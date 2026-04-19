@@ -13,6 +13,9 @@ from app.domain.books.value_objects import BookFilePath, BookTitle
 from app.domain.label.entities import Label
 from app.domain.label.repositories import LabelRepository
 from app.domain.label.value_objects import LabelName, LabelSlug
+from app.domain.library_item.entities import LibraryItem
+from app.domain.library_item.repositories import LibraryItemRepository
+from app.domain.library_item.value_objects import LibrarySourceKind
 
 
 @pytest.fixture
@@ -26,9 +29,15 @@ def label_repo():
 
 
 @pytest.fixture
-def uow(book_repo, label_repo):
+def library_item_repo():
+    return AsyncMock(spec=LibraryItemRepository)
+
+
+@pytest.fixture
+def uow(book_repo, label_repo, library_item_repo):
     mock = AsyncMock(spec=AbstractUnitOfWork)
     mock.books = book_repo
+    mock.library_items = library_item_repo
     mock.labels = label_repo
     return mock
 
@@ -53,4 +62,13 @@ def label(user_id) -> Label:
         name=LabelName("Fiction"),
         slug=LabelSlug("fiction"),
         owner_user_id=user_id,
+    )
+
+
+@pytest.fixture
+def library_item(user_id: UserId, book: Book) -> LibraryItem:
+    return LibraryItem.create(
+        user_id=user_id,
+        book_id=book.id,
+        source_kind=LibrarySourceKind.UPLOAD,
     )

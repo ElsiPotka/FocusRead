@@ -11,6 +11,14 @@ if TYPE_CHECKING:
 
 
 class BookRepository(ABC):
+    """Canonical catalog book persistence.
+
+    Slim interface: books are catalog records, not user-owned uploads.
+    Reader access queries belong on `LibraryItemRepository`; merchant
+    queries belong on `MarketplaceListingRepository`. This interface only
+    speaks in catalog identity and metadata.
+    """
+
     @abstractmethod
     async def save(self, book: Book) -> None: ...
 
@@ -27,6 +35,9 @@ class BookRepository(ABC):
 
     @abstractmethod
     async def search(self, *, book_filter: BookFilter) -> list[Book]: ...
+
+    @abstractmethod
+    async def list_by_ids(self, book_ids: list[BookId]) -> list[Book]: ...
 
     @abstractmethod
     async def delete(self, *, book_id: BookId) -> None: ...

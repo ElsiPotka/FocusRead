@@ -23,11 +23,16 @@ class BookmarkResponse(BaseModel):
     updated_at: datetime
 
     @staticmethod
-    def from_entity(bookmark: Bookmark) -> BookmarkResponse:
+    def from_entity(
+        bookmark: Bookmark,
+        *,
+        user_id: UUID,
+        book_id: UUID,
+    ) -> BookmarkResponse:
         return BookmarkResponse(
             id=bookmark.id.value,
-            user_id=bookmark.user_id.value,
-            book_id=bookmark.book_id.value,
+            user_id=user_id,
+            book_id=book_id,
             word_index=bookmark.word_index,
             chunk_index=bookmark.chunk_index,
             page_number=bookmark.page_number,

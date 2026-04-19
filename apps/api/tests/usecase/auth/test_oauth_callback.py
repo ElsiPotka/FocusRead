@@ -1,6 +1,10 @@
 from __future__ import annotations
 
-from app.application.auth.oauth_callback import HandleOAuthCallback
+from app.application.auth.oauth_callback import (
+    HandleOAuthCallback,
+    OAuthTokens,
+    OAuthUserInfo,
+)
 from app.domain.account.entities import Account
 from app.domain.auth.value_objects import AccountId, Email, ProviderId
 from app.domain.role.entities import Role
@@ -8,7 +12,7 @@ from app.domain.role.value_objects import RoleName
 from app.domain.user.entities import User
 
 
-def _google_user_info(sub: str = "google-sub-123") -> dict:
+def _google_user_info(sub: str = "google-sub-123") -> OAuthUserInfo:
     return {
         "sub": sub,
         "email": "user@gmail.com",
@@ -17,7 +21,7 @@ def _google_user_info(sub: str = "google-sub-123") -> dict:
     }
 
 
-def _oauth_tokens() -> dict:
+def _oauth_tokens() -> OAuthTokens:
     return {
         "access_token": "at_xxx",
         "refresh_token": "rt_xxx",

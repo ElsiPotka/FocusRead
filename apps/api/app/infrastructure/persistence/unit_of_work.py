@@ -9,6 +9,9 @@ from app.infrastructure.persistence.db import get_db
 from app.infrastructure.persistence.repositories.account_repository import (
     SqlAlchemyAccountRepository,
 )
+from app.infrastructure.persistence.repositories.book_asset_repository import (
+    SqlAlchemyBookAssetRepository,
+)
 from app.infrastructure.persistence.repositories.book_chunk_repository import (
     SqlAlchemyBookChunkRepository,
 )
@@ -30,6 +33,12 @@ from app.infrastructure.persistence.repositories.jwt_signing_key_repository impo
 from app.infrastructure.persistence.repositories.label_repository import (
     SqlAlchemyLabelRepository,
 )
+from app.infrastructure.persistence.repositories.library_item_repository import (
+    SqlAlchemyLibraryItemRepository,
+)
+from app.infrastructure.persistence.repositories.marketplace_listing_repository import (
+    SqlAlchemyMarketplaceListingRepository,
+)
 from app.infrastructure.persistence.repositories.reading_session_repository import (
     SqlAlchemyReadingSessionRepository,
 )
@@ -48,9 +57,6 @@ from app.infrastructure.persistence.repositories.shelf_repository import (
 from app.infrastructure.persistence.repositories.theme_repository import (
     SqlAlchemyThemeRepository,
 )
-from app.infrastructure.persistence.repositories.user_book_state_repository import (
-    SqlAlchemyUserBookStateRepository,
-)
 from app.infrastructure.persistence.repositories.user_repository import (
     SqlAlchemyUserRepository,
 )
@@ -65,16 +71,18 @@ class SqlAlchemyUnitOfWork(AbstractUnitOfWork):
     def __init__(self, session: AsyncSession) -> None:
         self.session = session
         self.books = SqlAlchemyBookRepository(session)
+        self.book_assets = SqlAlchemyBookAssetRepository(session)
         self.book_chunks = SqlAlchemyBookChunkRepository(session)
         self.book_toc_entries = SqlAlchemyBookTOCEntryRepository(session)
         self.bookmarks = SqlAlchemyBookmarkRepository(session)
         self.contributors = SqlAlchemyContributorRepository(session)
         self.labels = SqlAlchemyLabelRepository(session)
+        self.library_items = SqlAlchemyLibraryItemRepository(session)
+        self.marketplace_listings = SqlAlchemyMarketplaceListingRepository(session)
         self.reading_sessions = SqlAlchemyReadingSessionRepository(session)
         self.reading_stats = SqlAlchemyReadingStatRepository(session)
         self.shelves = SqlAlchemyShelfRepository(session)
         self.themes = SqlAlchemyThemeRepository(session)
-        self.user_book_states = SqlAlchemyUserBookStateRepository(session)
         self.users = SqlAlchemyUserRepository(session)
         self.roles = SqlAlchemyRoleRepository(session)
         self.accounts = SqlAlchemyAccountRepository(session)

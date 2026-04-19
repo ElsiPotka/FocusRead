@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, TypedDict
 
 from app.domain.auth.value_objects import UserId
 from app.domain.shelf.value_objects import ShelfId
@@ -12,6 +12,11 @@ if TYPE_CHECKING:
     from app.domain.shelf.entities import Shelf
 
 
+class ShelfOrderingItem(TypedDict):
+    shelf_id: UUID
+    sort_order: int
+
+
 class ReorderShelves:
     def __init__(self, uow: AbstractUnitOfWork) -> None:
         self._uow = uow
@@ -20,12 +25,12 @@ class ReorderShelves:
         self,
         *,
         user_id: UUID,
-        ordering: list[dict[str, object]],
+        ordering: list[ShelfOrderingItem],
     ) -> list[Shelf]:
         parsed = [
             (
-                ShelfId(item["shelf_id"]),  # type: ignore[arg-type]
-                int(item["sort_order"]),  # type: ignore[arg-type]
+                ShelfId(item["shelf_id"]),
+                item["sort_order"],
             )
             for item in ordering
         ]

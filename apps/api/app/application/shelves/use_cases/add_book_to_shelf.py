@@ -37,13 +37,19 @@ class AddBookToShelf:
         )
         if book is None:
             raise NotFoundError("Book not found")
+        library_item = await self._uow.library_items.get_active_for_user_book(
+            user_id=UserId(user_id),
+            book_id=book.id,
+        )
+        if library_item is None:
+            raise NotFoundError("Library item not found")
 
-        current_ids = await self._uow.shelves.list_book_ids(shelf_id=shelf.id)
+        current_ids = await self._uow.shelves.list_library_item_ids(shelf_id=shelf.id)
         next_order = len(current_ids)
 
-        await self._uow.shelves.add_book(
+        await self._uow.shelves.add_library_item(
             shelf_id=shelf.id,
-            book_id=book.id,
+            library_item_id=library_item.id,
             sort_order=next_order,
         )
         await self._uow.commit()

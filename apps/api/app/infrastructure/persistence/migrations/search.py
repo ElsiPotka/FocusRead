@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import re
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Protocol, cast
 
 import sqlalchemy as sa
 from sqlalchemy.dialects.postgresql import TSVECTOR
@@ -17,6 +17,25 @@ if TYPE_CHECKING:
 _IDENTIFIER_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
 
 
+class _AlembicOpLike(Protocol):
+    def create_index(
+        self,
+        index_name: str,
+        table_name: str,
+        columns: list[str],
+        *,
+        unique: bool = False,
+        postgresql_using: str | None = None,
+    ) -> None: ...
+
+    def drop_index(
+        self,
+        index_name: str,
+        *,
+        table_name: str | None = None,
+    ) -> None: ...
+
+
 def _validate_identifier(value: str, *, kind: str) -> str:
     if not _IDENTIFIER_RE.fullmatch(value):
         raise ValueError(f"Invalid {kind}: {value!r}")
@@ -28,7 +47,7 @@ def search_vector_column(
     searchable_columns: Sequence[str],
     language: str = "english",
     column_name: str = "search_vector",
-) -> sa.Column[Any]:
+) -> sa.Column[str]:
     column = _validate_identifier(column_name, kind="column name")
     return sa.Column(
         column,
@@ -42,14 +61,15 @@ def search_vector_column(
 
 
 def create_search_vector_index(
-    op: Any,
+    op: object,
     *,
     table_name: str,
     column_name: str = "search_vector",
 ) -> None:
+    alembic_op = cast("_AlembicOpLike", op)
     table = _validate_identifier(table_name, kind="table name")
     column = _validate_identifier(column_name, kind="column name")
-    op.create_index(
+    alembic_op.create_index(
         search_vector_index_name(table, column_name=column),
         table,
         [column],
@@ -59,11 +79,15 @@ def create_search_vector_index(
 
 
 def drop_search_vector_index(
-    op: Any,
+    op: object,
     *,
     table_name: str,
     column_name: str = "search_vector",
 ) -> None:
+    alembic_op = cast("_AlembicOpLike", op)
     table = _validate_identifier(table_name, kind="table name")
     column = _validate_identifier(column_name, kind="column name")
-    op.drop_index(search_vector_index_name(table, column_name=column), table_name=table)
+    alembic_op.drop_index(
+        search_vector_index_name(table, column_name=column),
+        table_name=table,
+    )

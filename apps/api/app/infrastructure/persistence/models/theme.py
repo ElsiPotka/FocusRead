@@ -45,9 +45,7 @@ class ThemeModel(SlugMixin, SearchMixin, TagsMixin, VersionMixin, BaseModel):
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
     tokens: Mapped[dict] = mapped_column(JSONB, nullable=False)
-    preview_image_url: Mapped[str | None] = mapped_column(
-        String(512), nullable=True
-    )
+    preview_image_url: Mapped[str | None] = mapped_column(String(512), nullable=True)
     is_public: Mapped[bool] = mapped_column(
         Boolean,
         nullable=False,

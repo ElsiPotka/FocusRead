@@ -4,10 +4,10 @@ from typing import TYPE_CHECKING
 
 from sqlalchemy import delete, select
 
+from app.domain.book_asset.value_objects import BookAssetId
 from app.domain.book_toc_entry.entities import BookTOCEntry
 from app.domain.book_toc_entry.repositories import BookTOCEntryRepository
 from app.domain.book_toc_entry.value_objects import BookTOCEntryId, BookTOCTitle
-from app.domain.books.value_objects import BookId  # noqa: TC001
 from app.infrastructure.persistence.models.book_toc_entry import BookTOCEntryModel
 
 if TYPE_CHECKING:
@@ -20,11 +20,10 @@ class SqlAlchemyBookTOCEntryRepository(BookTOCEntryRepository):
 
     async def save(self, entry: BookTOCEntry) -> None:
         model = await self.session.get(BookTOCEntryModel, entry.id.value)
-
         if model is None:
             model = BookTOCEntryModel(
                 id=entry.id.value,
-                book_id=entry.book_id.value,
+                book_asset_id=entry.book_asset_id.value,
                 parent_id=entry.parent_id.value if entry.parent_id else None,
                 title=entry.title.value,
                 level=entry.level,
@@ -37,6 +36,7 @@ class SqlAlchemyBookTOCEntryRepository(BookTOCEntryRepository):
             self.session.add(model)
             return
 
+        model.book_asset_id = entry.book_asset_id.value
         model.parent_id = entry.parent_id.value if entry.parent_id else None
         model.title = entry.title.value
         model.level = entry.level
@@ -51,22 +51,22 @@ class SqlAlchemyBookTOCEntryRepository(BookTOCEntryRepository):
             return None
         return self._to_entity(model)
 
-    async def list_for_book(self, *, book_id: BookId) -> list[BookTOCEntry]:
+    async def list_for_asset(self, *, book_asset_id: BookAssetId) -> list[BookTOCEntry]:
         stmt = (
             select(BookTOCEntryModel)
-            .where(BookTOCEntryModel.book_id == book_id.value)
+            .where(BookTOCEntryModel.book_asset_id == book_asset_id.value)
             .order_by(BookTOCEntryModel.order_index)
         )
         result = await self.session.execute(stmt)
-        return [self._to_entity(m) for m in result.scalars().all()]
+        return [self._to_entity(model) for model in result.scalars().all()]
 
     async def save_many(self, entries: list[BookTOCEntry]) -> None:
         for entry in entries:
             await self.save(entry)
 
-    async def delete_for_book(self, *, book_id: BookId) -> None:
+    async def delete_for_asset(self, *, book_asset_id: BookAssetId) -> None:
         stmt = delete(BookTOCEntryModel).where(
-            BookTOCEntryModel.book_id == book_id.value
+            BookTOCEntryModel.book_asset_id == book_asset_id.value,
         )
         await self.session.execute(stmt)
 
@@ -74,7 +74,7 @@ class SqlAlchemyBookTOCEntryRepository(BookTOCEntryRepository):
     def _to_entity(model: BookTOCEntryModel) -> BookTOCEntry:
         return BookTOCEntry(
             id=BookTOCEntryId(model.id),
-            book_id=BookId(model.book_id),
+            book_asset_id=BookAssetId(model.book_asset_id),
             title=BookTOCTitle(model.title),
             level=model.level,
             order_index=model.order_index,

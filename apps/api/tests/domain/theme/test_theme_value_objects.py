@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import cast
+
 import pytest
 
 from app.domain.theme.value_objects import (
@@ -119,7 +121,7 @@ def test_theme_tokens_rejects_url():
 
 
 def test_theme_tokens_non_string_value():
-    t = _valid_tokens()
-    t["ink"] = 123  # type: ignore[assignment]
+    t: dict[str, object] = dict(_valid_tokens())
+    t["ink"] = 123
     with pytest.raises(TypeError, match="must be a string"):
-        ThemeTokens(t)
+        ThemeTokens(cast("dict[str, str]", t))

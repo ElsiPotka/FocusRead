@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, TypedDict
 
 from app.application.common.errors import ApplicationError, NotFoundError
 from app.domain.auth.value_objects import UserId
@@ -21,6 +21,34 @@ from app.domain.books.value_objects import (
 if TYPE_CHECKING:
     from uuid import UUID
 
+    from app.domain.books.entities import Book
+
+
+class BookMetadataUpdates(TypedDict, total=False):
+    title: str | None
+    subtitle: str | None
+    document_type: str | None
+    description: str | None
+    language: str | None
+    source_filename: str | None
+    cover_image_path: str | None
+    publisher: str | None
+    published_year: int | None
+    page_count: int | None
+
+
+class BookEntityMetadataUpdates(TypedDict, total=False):
+    title: BookTitle
+    subtitle: BookSubtitle | None
+    document_type: BookDocumentType
+    description: BookDescription | None
+    language: BookLanguage | None
+    source_filename: BookSourceFilename | None
+    cover_image_path: BookCoverImagePath | None
+    publisher: BookPublisher | None
+    published_year: BookPublishedYear | None
+    page_count: BookPageCount | None
+
 
 class UpdateBookMetadata:
     def __init__(self, uow) -> None:
@@ -31,8 +59,8 @@ class UpdateBookMetadata:
         *,
         book_id: UUID,
         owner_user_id: UUID,
-        updates: dict[str, Any],
-    ):
+        updates: BookMetadataUpdates,
+    ) -> Book:
         book = await self._uow.books.get_for_owner(
             book_id=BookId(book_id),
             owner_user_id=UserId(owner_user_id),
@@ -40,7 +68,7 @@ class UpdateBookMetadata:
         if book is None:
             raise NotFoundError("Book not found")
 
-        mapped_updates: dict[str, Any] = {}
+        mapped_updates: BookEntityMetadataUpdates = {}
 
         if "title" in updates:
             if updates["title"] is None:

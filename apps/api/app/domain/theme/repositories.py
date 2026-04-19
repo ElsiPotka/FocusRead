@@ -43,28 +43,18 @@ class ThemeRepository(ABC):
     # ── User active theme ──
 
     @abstractmethod
-    async def get_active_theme_id(
-        self, *, user_id: UserId
-    ) -> ThemeId | None: ...
+    async def get_active_theme_id(self, *, user_id: UserId) -> ThemeId | None: ...
 
     @abstractmethod
-    async def set_active_theme(
-        self, *, user_id: UserId, theme_id: ThemeId
-    ) -> None: ...
+    async def set_active_theme(self, *, user_id: UserId, theme_id: ThemeId) -> None: ...
 
     # ── Likes ──
 
     @abstractmethod
-    async def has_user_liked(
-        self, *, user_id: UserId, theme_id: ThemeId
-    ) -> bool: ...
+    async def has_user_liked(self, *, user_id: UserId, theme_id: ThemeId) -> bool: ...
 
     @abstractmethod
-    async def add_like(
-        self, *, user_id: UserId, theme_id: ThemeId
-    ) -> None: ...
+    async def add_like(self, *, user_id: UserId, theme_id: ThemeId) -> None: ...
 
     @abstractmethod
-    async def remove_like(
-        self, *, user_id: UserId, theme_id: ThemeId
-    ) -> None: ...
+    async def remove_like(self, *, user_id: UserId, theme_id: ThemeId) -> None: ...

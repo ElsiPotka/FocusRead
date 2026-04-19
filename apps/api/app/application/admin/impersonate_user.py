@@ -47,7 +47,9 @@ class ImpersonateUser:
         if user_id is not None:
             user = await self._uow.users.get(UserId(user_id))
         else:
-            user = await self._uow.users.get_by_email(Email(email))  # type: ignore[arg-type]
+            if email is None:
+                raise NotFoundError("Provide either user_id or email")
+            user = await self._uow.users.get_by_email(Email(email))
 
         if user is None:
             raise NotFoundError("User not found")

@@ -34,15 +34,20 @@ class GetReadingSession:
         )
         if book is None:
             raise NotFoundError("Book not found")
+        library_item = await self._uow.library_items.get_active_for_user_book(
+            user_id=UserId(user_id),
+            book_id=BookId(book_id),
+        )
+        if library_item is None:
+            raise NotFoundError("Library item not found")
 
         cache_key = reading_session_key(str(user_id), str(book_id))
         cached = await self._cache.get_json(cache_key)
         if cached is not None:
             await self._cache.touch(cache_key, ttl_seconds=SESSION_CACHE_TTL_SECONDS)
 
-        session = await self._uow.reading_sessions.get(
-            user_id=UserId(user_id),
-            book_id=BookId(book_id),
+        session = await self._uow.reading_sessions.get_for_library_item(
+            library_item_id=library_item.id,
         )
 
         if session is not None and cached is None:

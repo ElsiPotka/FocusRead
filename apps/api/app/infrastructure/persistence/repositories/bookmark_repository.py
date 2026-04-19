@@ -4,11 +4,10 @@ from typing import TYPE_CHECKING
 
 from sqlalchemy import delete, select
 
-from app.domain.auth.value_objects import UserId
 from app.domain.bookmark.entities import Bookmark
 from app.domain.bookmark.repositories import BookmarkRepository
 from app.domain.bookmark.value_objects import BookmarkId, BookmarkLabel, BookmarkNote
-from app.domain.books.value_objects import BookId  # noqa: TC001
+from app.domain.library_item.value_objects import LibraryItemId
 from app.infrastructure.persistence.models.bookmark import BookmarkModel
 
 if TYPE_CHECKING:
@@ -21,12 +20,10 @@ class SqlAlchemyBookmarkRepository(BookmarkRepository):
 
     async def save(self, bookmark: Bookmark) -> None:
         model = await self.session.get(BookmarkModel, bookmark.id.value)
-
         if model is None:
             model = BookmarkModel(
                 id=bookmark.id.value,
-                user_id=bookmark.user_id.value,
-                book_id=bookmark.book_id.value,
+                library_item_id=bookmark.library_item_id.value,
                 word_index=bookmark.word_index,
                 chunk_index=bookmark.chunk_index,
                 page_number=bookmark.page_number,
@@ -38,6 +35,7 @@ class SqlAlchemyBookmarkRepository(BookmarkRepository):
             self.session.add(model)
             return
 
+        model.library_item_id = bookmark.library_item_id.value
         model.word_index = bookmark.word_index
         model.chunk_index = bookmark.chunk_index
         model.page_number = bookmark.page_number
@@ -51,32 +49,16 @@ class SqlAlchemyBookmarkRepository(BookmarkRepository):
             return None
         return self._to_entity(model)
 
-    async def get_for_owner(
-        self, *, bookmark_id: BookmarkId, user_id: UserId
-    ) -> Bookmark | None:
-        stmt = select(BookmarkModel).where(
-            BookmarkModel.id == bookmark_id.value,
-            BookmarkModel.user_id == user_id.value,
-        )
-        result = await self.session.execute(stmt)
-        model = result.scalar_one_or_none()
-        if model is None:
-            return None
-        return self._to_entity(model)
-
-    async def list_for_book(
-        self, *, user_id: UserId, book_id: BookId
+    async def list_for_library_item(
+        self, *, library_item_id: LibraryItemId
     ) -> list[Bookmark]:
         stmt = (
             select(BookmarkModel)
-            .where(
-                BookmarkModel.user_id == user_id.value,
-                BookmarkModel.book_id == book_id.value,
-            )
+            .where(BookmarkModel.library_item_id == library_item_id.value)
             .order_by(BookmarkModel.created_at)
         )
         result = await self.session.execute(stmt)
-        return [self._to_entity(m) for m in result.scalars().all()]
+        return [self._to_entity(model) for model in result.scalars().all()]
 
     async def delete(self, *, bookmark_id: BookmarkId) -> None:
         stmt = delete(BookmarkModel).where(BookmarkModel.id == bookmark_id.value)
@@ -86,8 +68,7 @@ class SqlAlchemyBookmarkRepository(BookmarkRepository):
     def _to_entity(model: BookmarkModel) -> Bookmark:
         return Bookmark(
             id=BookmarkId(model.id),
-            user_id=UserId(model.user_id),
-            book_id=BookId(model.book_id),
+            library_item_id=LibraryItemId(model.library_item_id),
             word_index=model.word_index,
             chunk_index=model.chunk_index,
             page_number=model.page_number,

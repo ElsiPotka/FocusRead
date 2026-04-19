@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Self
 
 from sqlalchemy import select
 
@@ -25,28 +25,28 @@ class SoftDeleteQueryMixin:
         def restore(self) -> None: ...
 
     @classmethod
-    async def all(cls, session: AsyncSession):
+    async def all(cls, session: AsyncSession) -> list[Self]:
         result = await session.execute(select(cls))
-        return result.scalars().all()
+        return list(result.scalars().all())
 
     @classmethod
-    async def with_trashed(cls, session: AsyncSession):
+    async def with_trashed(cls, session: AsyncSession) -> list[Self]:
         result = await session.execute(
             select(cls),
             execution_options={"include_deleted": True},
         )
-        return result.scalars().all()
+        return list(result.scalars().all())
 
     @classmethod
-    async def only_trashed(cls, session: AsyncSession):
+    async def only_trashed(cls, session: AsyncSession) -> list[Self]:
         result = await session.execute(
             select(cls).where(cls.deleted_at.is_not(None)),
             execution_options={"include_deleted": True},
         )
-        return result.scalars().all()
+        return list(result.scalars().all())
 
     @classmethod
-    async def find_with_trashed(cls, session: AsyncSession, id: Any):
+    async def find_with_trashed(cls, session: AsyncSession, id: UUID) -> Self | None:
         result = await session.execute(
             select(cls).where(cls.id == id),
             execution_options={"include_deleted": True},
@@ -54,7 +54,7 @@ class SoftDeleteQueryMixin:
         return result.scalars().one_or_none()
 
     @classmethod
-    async def restore_by_id(cls, session: AsyncSession, id: Any):
+    async def restore_by_id(cls, session: AsyncSession, id: UUID) -> Self | None:
         record = await cls.find_with_trashed(session, id)
         if record and record.is_deleted:
             record.restore()
@@ -63,7 +63,7 @@ class SoftDeleteQueryMixin:
         return None
 
     @classmethod
-    async def force_delete(cls, session: AsyncSession, id: Any):
+    async def force_delete(cls, session: AsyncSession, id: UUID) -> bool:
         record = await cls.find_with_trashed(session, id)
         if record:
             await session.delete(record)

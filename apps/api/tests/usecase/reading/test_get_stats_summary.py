@@ -8,8 +8,7 @@ import pytest
 
 from app.application.common.unit_of_work import AbstractUnitOfWork
 from app.application.reading.use_cases.get_stats_summary import GetStatsSummary
-from app.domain.auth.value_objects import UserId
-from app.domain.books.value_objects import BookId
+from app.domain.library_item.value_objects import LibraryItemId
 from app.domain.reading_stats.entities import ReadingStat
 from app.domain.reading_stats.repositories import ReadingStatRepository
 from app.domain.reading_stats.value_objects import (
@@ -29,10 +28,9 @@ def uow(stat_repo):
     return mock
 
 
-def make_stat(user_id, book_id, session_date, words, time_sec):
+def make_stat(library_item_id, session_date, words, time_sec):
     stat = ReadingStat.create(
-        user_id=UserId(user_id),
-        book_id=BookId(book_id),
+        library_item_id=LibraryItemId(library_item_id),
         session_date=SessionDate(session_date),
     )
     if words > 0 or time_sec > 0:
@@ -52,18 +50,17 @@ async def test_empty_stats(uow, stat_repo):
 
 
 async def test_aggregates_across_books(uow, stat_repo):
-    user_id = uuid4()
-    book1 = uuid4()
-    book2 = uuid4()
+    item1 = uuid4()
+    item2 = uuid4()
     today = date.today()
 
     stats = [
-        make_stat(user_id, book1, today, 300, 30),
-        make_stat(user_id, book2, today, 200, 20),
+        make_stat(item1, today, 300, 30),
+        make_stat(item2, today, 200, 20),
     ]
     stat_repo.list_for_user.return_value = stats
 
-    summary = await GetStatsSummary(uow).execute(user_id=user_id)
+    summary = await GetStatsSummary(uow).execute(user_id=uuid4())
 
     assert summary.total_words_read == 500
     assert summary.total_time_spent_sec == 50
@@ -71,18 +68,17 @@ async def test_aggregates_across_books(uow, stat_repo):
 
 
 async def test_daily_stats_grouped_by_date(uow, stat_repo):
-    user_id = uuid4()
-    book_id = uuid4()
+    item_id = uuid4()
     today = date.today()
     yesterday = today - timedelta(days=1)
 
     stats = [
-        make_stat(user_id, book_id, today, 300, 30),
-        make_stat(user_id, book_id, yesterday, 200, 20),
+        make_stat(item_id, today, 300, 30),
+        make_stat(item_id, yesterday, 200, 20),
     ]
     stat_repo.list_for_user.return_value = stats
 
-    summary = await GetStatsSummary(uow).execute(user_id=user_id)
+    summary = await GetStatsSummary(uow).execute(user_id=uuid4())
 
     assert len(summary.daily_stats) == 2
     assert summary.daily_stats[0].date == today

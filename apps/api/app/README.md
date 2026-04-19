@@ -4,14 +4,22 @@
 
 ## Current Progress
 
-This package now contains the full backend slice for the current FocusRead MVP, not
-just scaffolding. End-to-end flows already exist for:
+This package contains the runtime code for the API service and the ongoing schema
+refactor described in
+[`../../../docs/BACKEND_IMPLEMENTATION_PLAN.md`](../../../docs/BACKEND_IMPLEMENTATION_PLAN.md).
+The current state is:
 
 - auth, sessions, and role-based access control
 - book upload, async PDF chunk processing, chunk retrieval, and book metadata
-- reading sessions, reading stats, and user book state
-- shelves, labels, bookmarks, contributors, and discovery/search helpers
+- canonical catalog and access aggregates: `Book`, `BookAsset`, `LibraryItem`, and
+  `MarketplaceListing`
+- reading sessions, reading stats, bookmarks, shelves, and labels re-anchored to
+  the new aggregate model in the domain and persistence layers
+- contributors, search helpers, and admin basics
 - admin user listing, role management, and system-label curation
+
+Some application, router, and worker callers still speak the older book-centric
+signatures by design. Those migrations are tracked in plan phases `R3` through `R6`.
 
 ## Main Folders
 

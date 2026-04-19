@@ -2,13 +2,45 @@ from __future__ import annotations
 
 import hashlib
 import secrets
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, TypedDict, TypeGuard
 
 from app.infrastructure.cache.keys import build_cache_key
 from app.infrastructure.config.settings import settings
 
 if TYPE_CHECKING:
     from app.infrastructure.cache.redis_cache import RedisCache
+    from app.types import JSONValue
+
+
+class SessionCacheEntry(TypedDict):
+    session_id: str
+
+
+class CurrentUserCacheEntry(TypedDict):
+    name: str
+    surname: str
+    email: str
+    email_verified: bool
+    image: str | None
+    is_active: bool
+
+
+def _is_session_cache_entry(value: JSONValue) -> TypeGuard[SessionCacheEntry]:
+    return isinstance(value, dict) and isinstance(value.get("session_id"), str)
+
+
+def _is_current_user_cache_entry(
+    value: JSONValue,
+) -> TypeGuard[CurrentUserCacheEntry]:
+    return (
+        isinstance(value, dict)
+        and isinstance(value.get("name"), str)
+        and isinstance(value.get("surname"), str)
+        and isinstance(value.get("email"), str)
+        and isinstance(value.get("email_verified"), bool)
+        and (value.get("image") is None or isinstance(value.get("image"), str))
+        and isinstance(value.get("is_active"), bool)
+    )
 
 
 class SessionService:
@@ -33,23 +65,31 @@ class SessionService:
             ttl_seconds=ttl or settings.JWT_REFRESH_TOKEN_EXPIRE_DAYS * 86400,
         )
 
-    async def get_cached_session(self, token_hash: str) -> dict[str, Any] | None:
+    async def get_cached_session(self, token_hash: str) -> SessionCacheEntry | None:
         key = build_cache_key("auth", "session", token_hash)
-        return await self._cache.get_json(key)
+        cached = await self._cache.get_json(key)
+        if cached is None or not _is_session_cache_entry(cached):
+            return None
+        return cached
 
     async def invalidate_cached_session(self, token_hash: str) -> None:
         key = build_cache_key("auth", "session", token_hash)
         await self._cache.delete(key)
 
     async def cache_current_user(
-        self, user_id: str, data: dict[str, Any], ttl: int = 300
+        self, user_id: str, data: CurrentUserCacheEntry, ttl: int = 300
     ) -> None:
         key = build_cache_key("auth", "user", user_id)
         await self._cache.set_json(key, data, ttl_seconds=ttl)
 
-    async def get_cached_current_user(self, user_id: str) -> dict[str, Any] | None:
+    async def get_cached_current_user(
+        self, user_id: str
+    ) -> CurrentUserCacheEntry | None:
         key = build_cache_key("auth", "user", user_id)
-        return await self._cache.get_json(key)
+        cached = await self._cache.get_json(key)
+        if cached is None or not _is_current_user_cache_entry(cached):
+            return None
+        return cached
 
     async def invalidate_current_user(self, user_id: str) -> None:
         key = build_cache_key("auth", "user", user_id)

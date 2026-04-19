@@ -12,17 +12,21 @@ from app.domain.reading_stats.value_objects import (
 )
 
 if TYPE_CHECKING:
-    from app.domain.auth.value_objects import UserId
-    from app.domain.books.value_objects import BookId
+    from app.domain.library_item.value_objects import LibraryItemId
 
 
 class ReadingStat:
+    """Per-day reading activity for a single `LibraryItem`.
+
+    Re-anchored from `(user_id, book_id)` to `library_item_id`. Unique per
+    `(library_item_id, session_date)` at the DB layer.
+    """
+
     def __init__(
         self,
         *,
         id: ReadingStatId,
-        user_id: UserId,
-        book_id: BookId,
+        library_item_id: LibraryItemId,
         session_date: SessionDate,
         words_read: WordsRead,
         time_spent_sec: TimeSpentSeconds,
@@ -31,8 +35,7 @@ class ReadingStat:
         updated_at: datetime | None = None,
     ) -> None:
         self._id = id
-        self._user_id = user_id
-        self._book_id = book_id
+        self._library_item_id = library_item_id
         self._session_date = session_date
         self._words_read = words_read
         self._time_spent_sec = time_spent_sec
@@ -44,14 +47,12 @@ class ReadingStat:
     def create(
         cls,
         *,
-        user_id: UserId,
-        book_id: BookId,
+        library_item_id: LibraryItemId,
         session_date: SessionDate | None = None,
     ) -> ReadingStat:
         return cls(
             id=ReadingStatId.generate(),
-            user_id=user_id,
-            book_id=book_id,
+            library_item_id=library_item_id,
             session_date=session_date or SessionDate(date.today()),
             words_read=WordsRead(0),
             time_spent_sec=TimeSpentSeconds(0),
@@ -62,12 +63,8 @@ class ReadingStat:
         return self._id
 
     @property
-    def user_id(self) -> UserId:
-        return self._user_id
-
-    @property
-    def book_id(self) -> BookId:
-        return self._book_id
+    def library_item_id(self) -> LibraryItemId:
+        return self._library_item_id
 
     @property
     def session_date(self) -> SessionDate:

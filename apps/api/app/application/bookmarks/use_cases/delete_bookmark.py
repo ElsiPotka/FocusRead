@@ -22,11 +22,11 @@ class DeleteBookmark:
         bookmark_id: UUID,
         user_id: UUID,
     ) -> None:
-        bookmark = await self._uow.bookmarks.get_for_owner(
-            bookmark_id=BookmarkId(bookmark_id),
-            user_id=UserId(user_id),
-        )
+        bookmark = await self._uow.bookmarks.get(bookmark_id=BookmarkId(bookmark_id))
         if bookmark is None:
+            raise NotFoundError("Bookmark not found")
+        library_item = await self._uow.library_items.get(bookmark.library_item_id)
+        if library_item is None or library_item.user_id != UserId(user_id):
             raise NotFoundError("Bookmark not found")
 
         await self._uow.bookmarks.delete(bookmark_id=bookmark.id)

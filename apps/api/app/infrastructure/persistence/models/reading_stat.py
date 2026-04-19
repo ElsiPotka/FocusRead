@@ -18,21 +18,15 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.infrastructure.persistence.models.base_model import BaseModel
 
 if TYPE_CHECKING:
-    from app.infrastructure.persistence.models.book import BookModel
-    from app.infrastructure.persistence.models.user import UserModel
+    from app.infrastructure.persistence.models.library_item import LibraryItemModel
 
 
 class ReadingStatModel(BaseModel):
     __tablename__ = "reading_stats"
 
-    user_id: Mapped[uuid.UUID] = mapped_column(
+    library_item_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
-        ForeignKey("users.id", ondelete="CASCADE"),
-        nullable=False,
-    )
-    book_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True),
-        ForeignKey("books.id", ondelete="CASCADE"),
+        ForeignKey("library_items.id", ondelete="CASCADE"),
         nullable=False,
     )
     session_date: Mapped[date] = mapped_column(Date, nullable=False)
@@ -42,15 +36,16 @@ class ReadingStatModel(BaseModel):
     )
     avg_wpm: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
-    user: Mapped[UserModel] = relationship("UserModel", lazy="raise")
-    book: Mapped[BookModel] = relationship("BookModel", lazy="raise")
+    library_item: Mapped[LibraryItemModel] = relationship(
+        "LibraryItemModel",
+        lazy="raise",
+    )
 
     __table_args__ = (
         UniqueConstraint(
-            "user_id",
-            "book_id",
+            "library_item_id",
             "session_date",
-            name="uq_reading_stats_user_id_book_id_session_date",
+            name="uq_reading_stats_library_item_id_session_date",
         ),
         CheckConstraint(
             "words_read >= 0",
@@ -64,5 +59,9 @@ class ReadingStatModel(BaseModel):
             "avg_wpm IS NULL OR avg_wpm > 0",
             name="reading_stats_avg_wpm_positive",
         ),
-        Index("ix_reading_stats_user_session_date", "user_id", "session_date"),
+        Index(
+            "ix_reading_stats_library_item_session_date",
+            "library_item_id",
+            "session_date",
+        ),
     )

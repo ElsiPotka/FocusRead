@@ -3,7 +3,15 @@ from __future__ import annotations
 import uuid  # noqa: TC003
 from typing import TYPE_CHECKING
 
-from sqlalchemy import Boolean, ForeignKey, Index, String, text
+from sqlalchemy import (
+    Boolean,
+    CheckConstraint,
+    ForeignKey,
+    Index,
+    String,
+    UniqueConstraint,
+    text,
+)
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -17,16 +25,16 @@ from app.infrastructure.persistence.models.mixins import (
 from app.infrastructure.persistence.models.mixins.search import search_vector_index
 
 if TYPE_CHECKING:
-    from app.infrastructure.persistence.models.book import BookModel
+    from app.infrastructure.persistence.models.library_item import LibraryItemModel
     from app.infrastructure.persistence.models.user import UserModel
 
 
 class LabelModel(SlugMixin, SearchMixin, VersionMixin, BaseModel):
-    __tablename__ = "labels"
+    __tablename__ = "library_labels"
     __slug_nullable__ = False
     __searchable_fields__ = ("name", "slug")
 
-    owner_user_id: Mapped[uuid.UUID | None] = mapped_column(
+    user_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("users.id", ondelete="CASCADE"),
         nullable=True,
@@ -41,32 +49,46 @@ class LabelModel(SlugMixin, SearchMixin, VersionMixin, BaseModel):
     )
 
     owner: Mapped[UserModel | None] = relationship("UserModel", lazy="raise")
-    book_links: Mapped[list[BookLabelModel]] = relationship(
+    item_links: Mapped[list[LibraryItemLabelModel]] = relationship(
         back_populates="label",
         cascade="all, delete-orphan",
         lazy="raise",
     )
 
     __table_args__ = (
-        Index("ix_labels_slug", "slug"),
-        Index("ix_labels_owner_slug", "owner_user_id", "slug"),
+        UniqueConstraint("user_id", "slug", name="uq_library_labels_user_id_slug"),
+        Index("ix_library_labels_slug", "slug"),
+        Index("ix_library_labels_user_slug", "user_id", "slug"),
+        Index(
+            "ix_library_labels_system_slug",
+            "slug",
+            unique=True,
+            postgresql_where=text("is_system"),
+        ),
+        CheckConstraint(
+            "(is_system AND user_id IS NULL) OR ((NOT is_system) AND user_id IS NOT NULL)",
+            name="library_labels_owner_mode_valid",
+        ),
         search_vector_index(__tablename__),
     )
 
 
-class BookLabelModel(Base):
-    __tablename__ = "book_labels"
+class LibraryItemLabelModel(Base):
+    __tablename__ = "library_item_labels"
 
-    book_id: Mapped[uuid.UUID] = mapped_column(
+    library_item_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
-        ForeignKey("books.id", ondelete="CASCADE"),
+        ForeignKey("library_items.id", ondelete="CASCADE"),
         primary_key=True,
     )
     label_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
-        ForeignKey("labels.id", ondelete="CASCADE"),
+        ForeignKey("library_labels.id", ondelete="CASCADE"),
         primary_key=True,
     )
 
-    book: Mapped[BookModel] = relationship("BookModel", lazy="raise")
-    label: Mapped[LabelModel] = relationship(back_populates="book_links", lazy="raise")
+    library_item: Mapped[LibraryItemModel] = relationship(
+        "LibraryItemModel",
+        lazy="raise",
+    )
+    label: Mapped[LabelModel] = relationship(back_populates="item_links", lazy="raise")

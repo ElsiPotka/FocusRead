@@ -25,7 +25,7 @@ from app.infrastructure.persistence.models.mixins import SearchMixin, VersionMix
 from app.infrastructure.persistence.models.mixins.search import search_vector_index
 
 if TYPE_CHECKING:
-    from app.infrastructure.persistence.models.book import BookModel
+    from app.infrastructure.persistence.models.library_item import LibraryItemModel
     from app.infrastructure.persistence.models.user import UserModel
 
 
@@ -56,7 +56,7 @@ class ShelfModel(SearchMixin, VersionMixin, BaseModel):
     )
 
     user: Mapped[UserModel] = relationship("UserModel", lazy="raise")
-    book_links: Mapped[list[ShelfBookModel]] = relationship(
+    item_links: Mapped[list[ShelfItemModel]] = relationship(
         back_populates="shelf",
         cascade="all, delete-orphan",
         lazy="raise",
@@ -69,17 +69,17 @@ class ShelfModel(SearchMixin, VersionMixin, BaseModel):
     )
 
 
-class ShelfBookModel(Base):
-    __tablename__ = "shelf_books"
+class ShelfItemModel(Base):
+    __tablename__ = "shelf_items"
 
     shelf_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("shelves.id", ondelete="CASCADE"),
         primary_key=True,
     )
-    book_id: Mapped[uuid.UUID] = mapped_column(
+    library_item_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
-        ForeignKey("books.id", ondelete="CASCADE"),
+        ForeignKey("library_items.id", ondelete="CASCADE"),
         primary_key=True,
     )
     added_at: Mapped[datetime] = mapped_column(
@@ -94,7 +94,10 @@ class ShelfBookModel(Base):
         server_default=text("0"),
     )
 
-    shelf: Mapped[ShelfModel] = relationship(back_populates="book_links", lazy="raise")
-    book: Mapped[BookModel] = relationship("BookModel", lazy="raise")
+    shelf: Mapped[ShelfModel] = relationship(back_populates="item_links", lazy="raise")
+    library_item: Mapped[LibraryItemModel] = relationship(
+        "LibraryItemModel",
+        lazy="raise",
+    )
 
-    __table_args__ = (Index("ix_shelf_books_book_id", "book_id"),)
+    __table_args__ = (Index("ix_shelf_items_library_item_id", "library_item_id"),)

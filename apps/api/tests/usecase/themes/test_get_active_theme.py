@@ -7,7 +7,6 @@ import pytest
 from app.application.themes import GetActiveTheme
 from app.domain.theme.entities import Theme
 from app.domain.theme.value_objects import (
-    REQUIRED_THEME_KEYS,
     ThemeId,
     ThemeName,
     ThemeSlug,

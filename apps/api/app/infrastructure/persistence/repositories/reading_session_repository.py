@@ -4,8 +4,7 @@ from typing import TYPE_CHECKING
 
 from sqlalchemy import select
 
-from app.domain.auth.value_objects import UserId
-from app.domain.books.value_objects import BookId
+from app.domain.library_item.value_objects import LibraryItemId
 from app.domain.reading_sessions.entities import ReadingSession
 from app.domain.reading_sessions.repositories import ReadingSessionRepository
 from app.domain.reading_sessions.value_objects import (
@@ -27,12 +26,10 @@ class SqlAlchemyReadingSessionRepository(ReadingSessionRepository):
 
     async def save(self, session: ReadingSession) -> None:
         model = await self.session.get(ReadingSessionModel, session.id.value)
-
         if model is None:
             model = ReadingSessionModel(
                 id=session.id.value,
-                user_id=session.user_id.value,
-                book_id=session.book_id.value,
+                library_item_id=session.library_item_id.value,
                 current_word_index=session.current_word_index.value,
                 current_chunk=session.current_chunk.value,
                 wpm_speed=session.wpm_speed.value,
@@ -44,6 +41,7 @@ class SqlAlchemyReadingSessionRepository(ReadingSessionRepository):
             self.session.add(model)
             return
 
+        model.library_item_id = session.library_item_id.value
         model.current_word_index = session.current_word_index.value
         model.current_chunk = session.current_chunk.value
         model.wpm_speed = session.wpm_speed.value
@@ -51,10 +49,11 @@ class SqlAlchemyReadingSessionRepository(ReadingSessionRepository):
         model.last_read_at = session.last_read_at
         model.updated_at = session.updated_at
 
-    async def get(self, *, user_id: UserId, book_id: BookId) -> ReadingSession | None:
+    async def get_for_library_item(
+        self, *, library_item_id: LibraryItemId
+    ) -> ReadingSession | None:
         stmt = select(ReadingSessionModel).where(
-            ReadingSessionModel.user_id == user_id.value,
-            ReadingSessionModel.book_id == book_id.value,
+            ReadingSessionModel.library_item_id == library_item_id.value,
         )
         result = await self.session.execute(stmt)
         model = result.scalar_one_or_none()
@@ -66,8 +65,7 @@ class SqlAlchemyReadingSessionRepository(ReadingSessionRepository):
     def _to_entity(model: ReadingSessionModel) -> ReadingSession:
         return ReadingSession(
             id=ReadingSessionId(model.id),
-            user_id=UserId(model.user_id),
-            book_id=BookId(model.book_id),
+            library_item_id=LibraryItemId(model.library_item_id),
             current_word_index=CurrentWordIndex(model.current_word_index),
             current_chunk=CurrentChunk(model.current_chunk),
             wpm_speed=WpmSpeed(model.wpm_speed),

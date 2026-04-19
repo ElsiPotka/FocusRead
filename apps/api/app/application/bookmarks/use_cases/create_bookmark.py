@@ -35,10 +35,15 @@ class CreateBookmark:
         )
         if book is None:
             raise NotFoundError("Book not found")
-
-        bookmark = Bookmark.create(
+        library_item = await self._uow.library_items.get_active_for_user_book(
             user_id=UserId(user_id),
             book_id=BookId(book_id),
+        )
+        if library_item is None:
+            raise NotFoundError("Library item not found")
+
+        bookmark = Bookmark.create(
+            library_item_id=library_item.id,
             word_index=word_index,
             chunk_index=chunk_index,
             page_number=page_number,

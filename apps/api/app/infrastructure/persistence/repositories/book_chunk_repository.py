@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING
 
 from sqlalchemy import delete, func, select
 
+from app.domain.book_asset.value_objects import BookAssetId
 from app.domain.book_chunks.entities import BookChunk
 from app.domain.book_chunks.repositories import BookChunkRepository
 from app.domain.book_chunks.value_objects import (
@@ -13,7 +14,6 @@ from app.domain.book_chunks.value_objects import (
     ChunkWordData,
     StartWordIndex,
 )
-from app.domain.books.value_objects import BookId
 from app.infrastructure.persistence.models.book_chunk import BookChunkModel
 
 if TYPE_CHECKING:
@@ -26,11 +26,10 @@ class SqlAlchemyBookChunkRepository(BookChunkRepository):
 
     async def save(self, chunk: BookChunk) -> None:
         model = await self.session.get(BookChunkModel, chunk.id.value)
-
         if model is None:
             model = BookChunkModel(
                 id=chunk.id.value,
-                book_id=chunk.book_id.value,
+                book_asset_id=chunk.book_asset_id.value,
                 chunk_index=chunk.chunk_index.value,
                 start_word_index=chunk.start_word_index.value,
                 word_data=chunk.word_data.value,
@@ -43,6 +42,7 @@ class SqlAlchemyBookChunkRepository(BookChunkRepository):
             self.session.add(model)
             return
 
+        model.book_asset_id = chunk.book_asset_id.value
         model.chunk_index = chunk.chunk_index.value
         model.start_word_index = chunk.start_word_index.value
         model.word_data = chunk.word_data.value
@@ -56,10 +56,10 @@ class SqlAlchemyBookChunkRepository(BookChunkRepository):
             await self.save(chunk)
 
     async def get_by_index(
-        self, *, book_id: BookId, chunk_index: ChunkIndex
+        self, *, book_asset_id: BookAssetId, chunk_index: ChunkIndex
     ) -> BookChunk | None:
         stmt = select(BookChunkModel).where(
-            BookChunkModel.book_id == book_id.value,
+            BookChunkModel.book_asset_id == book_asset_id.value,
             BookChunkModel.chunk_index == chunk_index.value,
         )
         result = await self.session.execute(stmt)
@@ -69,12 +69,12 @@ class SqlAlchemyBookChunkRepository(BookChunkRepository):
         return self._to_entity(model)
 
     async def get_by_word_index(
-        self, *, book_id: BookId, start_word_index: int
+        self, *, book_asset_id: BookAssetId, start_word_index: int
     ) -> BookChunk | None:
         stmt = (
             select(BookChunkModel)
             .where(
-                BookChunkModel.book_id == book_id.value,
+                BookChunkModel.book_asset_id == book_asset_id.value,
                 BookChunkModel.start_word_index <= start_word_index,
             )
             .order_by(BookChunkModel.start_word_index.desc())
@@ -86,24 +86,26 @@ class SqlAlchemyBookChunkRepository(BookChunkRepository):
             return None
         return self._to_entity(model)
 
-    async def count_for_book(self, *, book_id: BookId) -> int:
+    async def count_for_asset(self, *, book_asset_id: BookAssetId) -> int:
         stmt = (
             select(func.count())
             .select_from(BookChunkModel)
-            .where(BookChunkModel.book_id == book_id.value)
+            .where(BookChunkModel.book_asset_id == book_asset_id.value)
         )
         result = await self.session.execute(stmt)
         return result.scalar_one()
 
-    async def delete_for_book(self, *, book_id: BookId) -> None:
-        stmt = delete(BookChunkModel).where(BookChunkModel.book_id == book_id.value)
+    async def delete_for_asset(self, *, book_asset_id: BookAssetId) -> None:
+        stmt = delete(BookChunkModel).where(
+            BookChunkModel.book_asset_id == book_asset_id.value,
+        )
         await self.session.execute(stmt)
 
     @staticmethod
     def _to_entity(model: BookChunkModel) -> BookChunk:
         return BookChunk(
             id=BookChunkId(model.id),
-            book_id=BookId(model.book_id),
+            book_asset_id=BookAssetId(model.book_asset_id),
             chunk_index=ChunkIndex(model.chunk_index),
             start_word_index=StartWordIndex(model.start_word_index),
             word_data=ChunkWordData(model.word_data),

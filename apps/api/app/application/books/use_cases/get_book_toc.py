@@ -30,6 +30,6 @@ class GetBookTOC:
         if book is None:
             raise NotFoundError("Book not found")
 
-        return await self._uow.book_toc_entries.list_for_book(
-            book_id=BookId(book_id),
+        return await self._uow.book_toc_entries.list_for_asset(
+            book_asset_id=book.primary_asset_id,
         )

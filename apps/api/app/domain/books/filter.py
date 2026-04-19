@@ -10,6 +10,7 @@ if TYPE_CHECKING:
 
 class BookSortField(StrEnum):
     CREATED_AT = "created_at"
+    UPDATED_AT = "updated_at"
     TITLE = "title"
     LAST_OPENED_AT = "last_opened_at"
 
@@ -22,19 +23,12 @@ class SortDirection(StrEnum):
 @dataclass(frozen=True, slots=True)
 class BookFilter:
     owner_user_id: UserId
-
     query: str | None = None
-
+    document_type: str | None = None
+    status: str | None = None
     favorited: bool | None = None
     archived: bool | None = None
     completed: bool | None = None
-    continue_reading: bool | None = None
-
-    document_type: str | None = None
-    status: str | None = None
-
+    continue_reading: bool = False
     sort_by: BookSortField = BookSortField.CREATED_AT
     sort_dir: SortDirection = SortDirection.DESC
-
-    limit: int | None = None
-    offset: int = 0

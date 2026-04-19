@@ -6,15 +6,21 @@ from typing import TYPE_CHECKING
 from app.domain.book_toc_entry.value_objects import BookTOCEntryId, BookTOCTitle
 
 if TYPE_CHECKING:
-    from app.domain.books.value_objects import BookId
+    from app.domain.book_asset.value_objects import BookAssetId
 
 
 class BookTOCEntry:
+    """A table-of-contents node owned by a `BookAsset`.
+
+    Re-anchored from `Book` to `BookAsset` since TOC structure is a
+    property of the parsed document, not of catalog identity.
+    """
+
     def __init__(
         self,
         *,
         id: BookTOCEntryId,
-        book_id: BookId,
+        book_asset_id: BookAssetId,
         title: BookTOCTitle,
         level: int,
         order_index: int,
@@ -34,7 +40,7 @@ class BookTOCEntry:
             raise ValueError("TOC start word index cannot be negative.")
 
         self._id = id
-        self._book_id = book_id
+        self._book_asset_id = book_asset_id
         self._title = title
         self._level = level
         self._order_index = order_index
@@ -48,7 +54,7 @@ class BookTOCEntry:
     def create(
         cls,
         *,
-        book_id: BookId,
+        book_asset_id: BookAssetId,
         title: BookTOCTitle,
         level: int,
         order_index: int,
@@ -58,7 +64,7 @@ class BookTOCEntry:
     ) -> BookTOCEntry:
         return cls(
             id=BookTOCEntryId.generate(),
-            book_id=book_id,
+            book_asset_id=book_asset_id,
             title=title,
             level=level,
             order_index=order_index,
@@ -72,8 +78,8 @@ class BookTOCEntry:
         return self._id
 
     @property
-    def book_id(self) -> BookId:
-        return self._book_id
+    def book_asset_id(self) -> BookAssetId:
+        return self._book_asset_id
 
     @property
     def title(self) -> BookTOCTitle:

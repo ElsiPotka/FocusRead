@@ -33,7 +33,9 @@ class SqlAlchemyContributorRepository(ContributorRepository):
             model = ContributorModel(
                 id=contributor.id.value,
                 display_name=contributor.display_name.value,
-                sort_name=contributor.sort_name.value if contributor.sort_name else None,
+                sort_name=contributor.sort_name.value
+                if contributor.sort_name
+                else None,
                 created_at=contributor.created_at,
                 updated_at=contributor.updated_at,
             )
@@ -66,7 +68,11 @@ class SqlAlchemyContributorRepository(ContributorRepository):
         self, *, book_id: BookId
     ) -> list[tuple[Contributor, ContributorRole, int]]:
         stmt = (
-            select(ContributorModel, BookContributorModel.role, BookContributorModel.position)
+            select(
+                ContributorModel,
+                BookContributorModel.role,
+                BookContributorModel.position,
+            )
             .join(
                 BookContributorModel,
                 ContributorModel.id == BookContributorModel.contributor_id,

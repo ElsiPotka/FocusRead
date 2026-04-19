@@ -52,7 +52,7 @@ def book() -> Book:
 @pytest.fixture
 def chunk(book) -> BookChunk:
     return BookChunk.create(
-        book_id=book.id,
+        book_asset_id=book.primary_asset_id,
         chunk_index=ChunkIndex(2),
         start_word_index=StartWordIndex(5000),
         word_data=ChunkWordData([["w", "hello", 1.0]]),

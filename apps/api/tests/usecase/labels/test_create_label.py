@@ -21,7 +21,9 @@ async def test_create_label(uow, user_id, label_repo):
     uow.commit.assert_awaited_once()
 
 
-async def test_create_label_returns_existing_on_duplicate_slug(uow, user_id, label_repo):
+async def test_create_label_returns_existing_on_duplicate_slug(
+    uow, user_id, label_repo
+):
     existing = Label.create(
         name=LabelName("Fiction"),
         slug=LabelSlug("fiction"),

@@ -144,7 +144,7 @@ async def _process_book(book_id: str) -> dict[str, str]:
 
                 for raw_chunk in processor.extract_chunks():
                     chunk_entity = BookChunk.create(
-                        book_id=book.id,
+                        book_asset_id=book.primary_asset_id,
                         chunk_index=ChunkIndex(chunk_count),
                         start_word_index=StartWordIndex(running_word_count),
                         word_data=ChunkWordData(raw_chunk.tokens),

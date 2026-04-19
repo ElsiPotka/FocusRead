@@ -9,21 +9,22 @@ from app.application.common.errors import NotFoundError
 from app.domain.bookmark.entities import Bookmark
 
 
-async def test_list_bookmarks_returns_entries(uow, book_repo, bookmark_repo, book):
+async def test_list_bookmarks_returns_entries(
+    uow, book_repo, bookmark_repo, library_item_repo, book, library_item
+):
     bookmarks = [
         Bookmark.create(
-            user_id=book.owner_user_id,
-            book_id=book.id,
+            library_item_id=library_item.id,
             word_index=100,
         ),
         Bookmark.create(
-            user_id=book.owner_user_id,
-            book_id=book.id,
+            library_item_id=library_item.id,
             word_index=500,
         ),
     ]
     book_repo.get_for_owner.return_value = book
-    bookmark_repo.list_for_book.return_value = bookmarks
+    library_item_repo.get_active_for_user_book.return_value = library_item
+    bookmark_repo.list_for_library_item.return_value = bookmarks
 
     result = await ListBookmarks(uow).execute(
         book_id=book.id.value,
@@ -31,12 +32,15 @@ async def test_list_bookmarks_returns_entries(uow, book_repo, bookmark_repo, boo
     )
 
     assert len(result) == 2
-    bookmark_repo.list_for_book.assert_awaited_once()
+    bookmark_repo.list_for_library_item.assert_awaited_once()
 
 
-async def test_list_bookmarks_empty(uow, book_repo, bookmark_repo, book):
+async def test_list_bookmarks_empty(
+    uow, book_repo, bookmark_repo, library_item_repo, book, library_item
+):
     book_repo.get_for_owner.return_value = book
-    bookmark_repo.list_for_book.return_value = []
+    library_item_repo.get_active_for_user_book.return_value = library_item
+    bookmark_repo.list_for_library_item.return_value = []
 
     result = await ListBookmarks(uow).execute(
         book_id=book.id.value,

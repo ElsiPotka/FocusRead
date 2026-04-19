@@ -46,12 +46,16 @@ class UpdateShelf:
         if name is not None or description is not None or clear_description:
             shelf.rename(
                 name=ShelfName(name) if name else shelf.name,
-                description=ShelfDescription(description) if description else (None if clear_description else shelf.description),
+                description=ShelfDescription(description)
+                if description
+                else (None if clear_description else shelf.description),
             )
 
         if color is not None or icon is not None or clear_color or clear_icon:
             shelf.restyle(
-                color=ShelfColor(color) if color else (None if clear_color else shelf.color),
+                color=ShelfColor(color)
+                if color
+                else (None if clear_color else shelf.color),
                 icon=ShelfIcon(icon) if icon else (None if clear_icon else shelf.icon),
             )
 

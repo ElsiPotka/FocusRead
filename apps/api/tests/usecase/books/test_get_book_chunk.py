@@ -62,7 +62,7 @@ def book() -> Book:
 @pytest.fixture
 def chunk(book) -> BookChunk:
     return BookChunk.create(
-        book_id=book.id,
+        book_asset_id=book.primary_asset_id,
         chunk_index=ChunkIndex(0),
         start_word_index=StartWordIndex(0),
         word_data=ChunkWordData([["w", "hello", 1.0], ["w", "world", 2.0]]),
@@ -97,7 +97,7 @@ async def test_get_chunk_cache_hit_refreshes_ttl(
     uow, book_repo, chunk_repo, cache, book, chunk
 ):
     book_repo.get_for_owner.return_value = book
-    cache.get_json.return_value = _to_cache(chunk)
+    cache.get_json.return_value = _to_cache(chunk, book_id=book.id)
 
     result = await GetBookChunk(uow, cache).execute(
         book_id=book.id.value,

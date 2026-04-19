@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import uuid
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 from loguru import logger
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
@@ -9,12 +9,13 @@ from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoin
 if TYPE_CHECKING:
     from starlette.requests import Request
     from starlette.responses import Response
+    from starlette.types import ASGIApp
 
 
 class RequestIdMiddleware(BaseHTTPMiddleware):
     def __init__(
         self,
-        app: Any,
+        app: ASGIApp,
         max_length: int = 100,
         trust_proxy: bool = True,
     ) -> None:

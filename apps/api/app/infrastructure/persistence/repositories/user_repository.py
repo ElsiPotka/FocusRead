@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 from sqlalchemy import func, select
 from sqlalchemy.orm import selectinload
@@ -24,6 +24,9 @@ from app.infrastructure.persistence.pagination import paginate
 
 if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession
+    from sqlalchemy.sql import Select
+
+    from app.types import PaginatedResult
 
 
 class SqlAlchemyUserRepository(UserRepository):
@@ -84,7 +87,7 @@ class SqlAlchemyUserRepository(UserRepository):
         page: int,
         per_page: int,
         cursor: str | None = None,
-    ) -> dict[str, Any]:
+    ) -> PaginatedResult[UserProfile]:
         result = await paginate(
             self.session,
             self._profile_select(),
@@ -99,7 +102,7 @@ class SqlAlchemyUserRepository(UserRepository):
         }
 
     @staticmethod
-    def _profile_select():
+    def _profile_select() -> Select[tuple[UserModel]]:
         return select(UserModel).options(
             selectinload(UserModel.accounts).load_only(
                 AccountModel.id,

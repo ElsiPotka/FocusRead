@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from app.domain.account.entities import Account
@@ -14,6 +14,7 @@ if TYPE_CHECKING:
     from app.domain.session.entities import Session
     from app.domain.user.entities import User
     from app.domain.user.profile import UserProfile
+    from app.types import PaginatedResult
 
 
 class UserRepository(ABC):
@@ -36,7 +37,7 @@ class UserRepository(ABC):
         page: int,
         per_page: int,
         cursor: str | None = None,
-    ) -> dict[str, Any]: ...
+    ) -> PaginatedResult[UserProfile]: ...
 
 
 class AccountRepository(ABC):

@@ -8,8 +8,11 @@ from app.application.bookmarks.use_cases.create_bookmark import CreateBookmark
 from app.application.common.errors import NotFoundError
 
 
-async def test_create_bookmark_minimal(uow, book_repo, bookmark_repo, book):
+async def test_create_bookmark_minimal(
+    uow, book_repo, bookmark_repo, library_item_repo, book, library_item
+):
     book_repo.get_for_owner.return_value = book
+    library_item_repo.get_active_for_user_book.return_value = library_item
 
     result = await CreateBookmark(uow).execute(
         book_id=book.id.value,
@@ -23,8 +26,11 @@ async def test_create_bookmark_minimal(uow, book_repo, bookmark_repo, book):
     uow.commit.assert_awaited_once()
 
 
-async def test_create_bookmark_with_label_and_note(uow, book_repo, bookmark_repo, book):
+async def test_create_bookmark_with_label_and_note(
+    uow, book_repo, bookmark_repo, library_item_repo, book, library_item
+):
     book_repo.get_for_owner.return_value = book
+    library_item_repo.get_active_for_user_book.return_value = library_item
 
     result = await CreateBookmark(uow).execute(
         book_id=book.id.value,
@@ -37,6 +43,8 @@ async def test_create_bookmark_with_label_and_note(uow, book_repo, bookmark_repo
     )
 
     assert result.word_index == 500
+    assert result.label is not None
+    assert result.note is not None
     assert result.label.value == "Important"
     assert result.note.value == "Remember this"
 

@@ -33,7 +33,6 @@ Reading and library:
 - `book_toc_entry/`
 - `reading_sessions/`
 - `reading_stats/`
-- `user_book_state/`
 
 Organization and curation:
 

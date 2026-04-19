@@ -5,6 +5,7 @@ from uuid import uuid4
 
 import pytest
 
+from app.domain.book_asset.value_objects import BookAssetId
 from app.domain.book_chunks.entities import BookChunk
 from app.domain.book_chunks.value_objects import (
     ChunkIndex,
@@ -12,16 +13,15 @@ from app.domain.book_chunks.value_objects import (
     ChunkWordData,
     StartWordIndex,
 )
-from app.domain.books.value_objects import BookId
 
 
 class TestBookChunk:
     def test_create_sets_expected_defaults(self):
-        book_id = BookId(uuid4())
+        book_asset_id = BookAssetId(uuid4())
         word_data = ChunkWordData([["w", "hello", 1.0], ["w", "world.", 2.0]])
 
         chunk = BookChunk.create(
-            book_id=book_id,
+            book_asset_id=book_asset_id,
             chunk_index=ChunkIndex(0),
             start_word_index=StartWordIndex(0),
             word_data=word_data,
@@ -30,7 +30,7 @@ class TestBookChunk:
             page_end=3,
         )
 
-        assert chunk.book_id == book_id
+        assert chunk.book_asset_id == book_asset_id
         assert chunk.chunk_index.value == 0
         assert chunk.start_word_index.value == 0
         assert chunk.word_count.value == 2
@@ -42,7 +42,7 @@ class TestBookChunk:
 
     def test_create_without_page_range(self):
         chunk = BookChunk.create(
-            book_id=BookId(uuid4()),
+            book_asset_id=BookAssetId(uuid4()),
             chunk_index=ChunkIndex(0),
             start_word_index=StartWordIndex(0),
             word_data=ChunkWordData([["w", "test", 1.0]]),
@@ -55,7 +55,7 @@ class TestBookChunk:
     def test_rejects_non_positive_page_start(self):
         with pytest.raises(ValueError, match="Page start must be positive"):
             BookChunk.create(
-                book_id=BookId(uuid4()),
+                book_asset_id=BookAssetId(uuid4()),
                 chunk_index=ChunkIndex(0),
                 start_word_index=StartWordIndex(0),
                 word_data=ChunkWordData([["w", "test", 1.0]]),
@@ -66,7 +66,7 @@ class TestBookChunk:
     def test_rejects_non_positive_page_end(self):
         with pytest.raises(ValueError, match="Page end must be positive"):
             BookChunk.create(
-                book_id=BookId(uuid4()),
+                book_asset_id=BookAssetId(uuid4()),
                 chunk_index=ChunkIndex(0),
                 start_word_index=StartWordIndex(0),
                 word_data=ChunkWordData([["w", "test", 1.0]]),
@@ -76,14 +76,14 @@ class TestBookChunk:
 
     def test_equality_by_id(self):
         chunk1 = BookChunk.create(
-            book_id=BookId(uuid4()),
+            book_asset_id=BookAssetId(uuid4()),
             chunk_index=ChunkIndex(0),
             start_word_index=StartWordIndex(0),
             word_data=ChunkWordData([["w", "test", 1.0]]),
             word_count=ChunkWordCount(1),
         )
         chunk2 = BookChunk.create(
-            book_id=BookId(uuid4()),
+            book_asset_id=BookAssetId(uuid4()),
             chunk_index=ChunkIndex(0),
             start_word_index=StartWordIndex(0),
             word_data=ChunkWordData([["w", "test", 1.0]]),

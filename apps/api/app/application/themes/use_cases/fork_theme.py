@@ -40,7 +40,9 @@ class ForkTheme:
             slug=ThemeSlug(SlugMixin.generate_slug(fork_name)),
             tokens=ThemeTokens(dict(source.tokens.value)),
             owner_user_id=UserId(user_id),
-            description=ThemeDescription(source.description.value) if source.description else None,
+            description=ThemeDescription(source.description.value)
+            if source.description
+            else None,
             tags=list(source.tags) if source.tags else None,
             forked_from_id=source.id,
         )

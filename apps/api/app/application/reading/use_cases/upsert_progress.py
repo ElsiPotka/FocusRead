@@ -65,15 +65,19 @@ class UpsertProgress:
                 True,
                 ttl_seconds=OWNERSHIP_CACHE_TTL_SECONDS,
             )
-
-        session = await self._uow.reading_sessions.get(
+        library_item = await self._uow.library_items.get_active_for_user_book(
             user_id=UserId(user_id),
             book_id=BookId(book_id),
         )
+        if library_item is None:
+            raise NotFoundError("Library item not found")
+
+        session = await self._uow.reading_sessions.get_for_library_item(
+            library_item_id=library_item.id,
+        )
         if session is None:
             session = ReadingSession.create(
-                user_id=UserId(user_id),
-                book_id=BookId(book_id),
+                library_item_id=library_item.id,
                 wpm_speed=WpmSpeed(update.wpm_speed) if update.wpm_speed else None,
                 words_per_flash=WordsPerFlash(update.words_per_flash)
                 if update.words_per_flash
@@ -92,14 +96,12 @@ class UpsertProgress:
 
         today = SessionDate(date.today())
         stat = await self._uow.reading_stats.get(
-            user_id=UserId(user_id),
-            book_id=BookId(book_id),
+            library_item_id=library_item.id,
             session_date=today,
         )
         if stat is None:
             stat = ReadingStat.create(
-                user_id=UserId(user_id),
-                book_id=BookId(book_id),
+                library_item_id=library_item.id,
                 session_date=today,
             )
 

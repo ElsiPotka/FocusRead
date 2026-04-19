@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Never
+from typing import TYPE_CHECKING, Never
 
 from fastapi import APIRouter, Cookie, Depends, Query, Request, Response, status
 from fastapi.responses import RedirectResponse  # noqa: TC002
@@ -61,23 +61,23 @@ def _build_token_response(access_token: str, refresh_token: str) -> TokenRespons
 def _set_auth_cookies(
     response: Response, access_token: str, refresh_token: str
 ) -> None:
-    cookie_kwargs: dict[str, Any] = {
-        "httponly": True,
-        "samesite": "lax",
-        "secure": settings.AUTH_COOKIE_SECURE_RESOLVED,
-        "path": "/",
-    }
     response.set_cookie(
         "access_token",
         access_token,
         max_age=settings.JWT_ACCESS_TOKEN_EXPIRE_MINUTES * 60,
-        **cookie_kwargs,
+        httponly=True,
+        samesite="lax",
+        secure=settings.AUTH_COOKIE_SECURE_RESOLVED,
+        path="/",
     )
     response.set_cookie(
         "refresh_token",
         refresh_token,
         max_age=settings.JWT_REFRESH_TOKEN_EXPIRE_DAYS * 86400,
-        **cookie_kwargs,
+        httponly=True,
+        samesite="lax",
+        secure=settings.AUTH_COOKIE_SECURE_RESOLVED,
+        path="/",
     )
 
 

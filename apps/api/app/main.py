@@ -1,5 +1,5 @@
 from contextlib import asynccontextmanager
-from typing import Any, cast
+from typing import TYPE_CHECKING, cast
 
 import uvloop
 from fastapi import FastAPI
@@ -13,6 +13,9 @@ from app.presentation.api.exception_handlers import register_exception_handlers
 from app.presentation.api.middleware.rate_limiter import limiter
 from app.presentation.api.middlewares import register_middleware
 from app.presentation.api.routers import register_routers
+
+if TYPE_CHECKING:
+    from starlette.types import ExceptionHandler
 
 uvloop.install()
 
@@ -46,14 +49,14 @@ def create_application() -> FastAPI:
     app.state.limiter = limiter
     app.add_exception_handler(
         RateLimitExceeded,
-        cast("Any", _rate_limit_exceeded_handler),
+        cast("ExceptionHandler", _rate_limit_exceeded_handler),
     )
     register_exception_handlers(app)
     register_middleware(app)
     register_routers(app)
 
     @app.get("/", tags=["meta"])
-    async def root() -> dict[str, Any]:
+    async def root() -> dict[str, str]:
         return {
             "name": settings.APP_NAME,
             "version": settings.APP_VERSION,

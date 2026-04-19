@@ -61,6 +61,7 @@ async def get_active_theme(
     return APIResponse(
         success=True,
         data=ThemeTokensResponse(tokens=tokens),
+        message="Active theme retrieved",
     )
 
 
@@ -90,6 +91,7 @@ async def list_my_themes(
         success=True,
         data=[ThemeResponse.from_entity(t) for t in themes],
         count=len(themes),
+        message="Themes retrieved",
     )
 
 
@@ -121,6 +123,8 @@ async def browse_marketplace(
             total_pages=total_pages,
             has_next=page < total_pages,
             has_prev=page > 1,
+            next_cursor=None,
+            prev_cursor=None,
         ),
     )
 
@@ -160,6 +164,7 @@ async def get_theme(
     return APIResponse(
         success=True,
         data=ThemeDetailResponse.from_entity(theme),
+        message="Theme retrieved",
     )
 
 

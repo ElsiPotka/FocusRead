@@ -42,7 +42,7 @@ class ResolveBookChunk:
 
         # 2. Find chunk containing this word index
         chunk = await self._uow.book_chunks.get_by_word_index(
-            book_id=BookId(book_id),
+            book_asset_id=book.primary_asset_id,
             start_word_index=word_index,
         )
         if chunk is None:

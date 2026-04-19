@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import traceback
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, cast
 
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
@@ -30,8 +30,10 @@ if TYPE_CHECKING:
     from fastapi import FastAPI, Request
     from starlette.types import ExceptionHandler
 
+    from app.types import JSONObject, JSONValue
 
-def _make_json_safe(value: Any) -> Any:
+
+def _make_json_safe(value: object) -> JSONValue:
     if value is None or isinstance(value, str | int | float | bool):
         return value
     if isinstance(value, Exception):
@@ -47,7 +49,7 @@ async def _application_error_handler(
     _request: Request,
     exc: ApplicationError,
 ) -> JSONResponse:
-    body: dict[str, Any] = {"success": False, "message": exc.message}
+    body: JSONObject = {"success": False, "message": exc.message}
 
     if exc.detail is not None:
         body["detail"] = _make_json_safe(exc.detail)
@@ -79,7 +81,7 @@ async def _unhandled_error_handler(
 ) -> JSONResponse:
     log.exception("Unhandled exception: {}", exc)
 
-    body: dict[str, Any] = {
+    body: JSONObject = {
         "success": False,
         "message": "Internal server error",
     }

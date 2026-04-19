@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, TypedDict
 
 from app.application.common.errors import NotFoundError
 from app.domain.auth.value_objects import UserId
@@ -14,6 +14,12 @@ if TYPE_CHECKING:
     from app.domain.contributor.entities import Contributor
 
 
+class ContributorOrderingItem(TypedDict):
+    contributor_id: UUID
+    role: str
+    position: int
+
+
 class ReorderContributors:
     def __init__(self, uow: AbstractUnitOfWork) -> None:
         self._uow = uow
@@ -23,7 +29,7 @@ class ReorderContributors:
         *,
         book_id: UUID,
         owner_user_id: UUID,
-        ordering: list[dict[str, object]],
+        ordering: list[ContributorOrderingItem],
     ) -> list[tuple[Contributor, ContributorRole, int]]:
         book = await self._uow.books.get_for_owner(
             book_id=BookId(book_id),
@@ -34,9 +40,9 @@ class ReorderContributors:
 
         parsed = [
             (
-                ContributorId(item["contributor_id"]),  # type: ignore[arg-type]
-                ContributorRole(item["role"]),  # type: ignore[arg-type]
-                int(item["position"]),  # type: ignore[arg-type]
+                ContributorId(item["contributor_id"]),
+                ContributorRole(item["role"]),
+                item["position"],
             )
             for item in ordering
         ]

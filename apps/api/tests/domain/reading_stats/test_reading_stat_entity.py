@@ -1,19 +1,24 @@
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
 from uuid import uuid4
 
-from app.domain.auth.value_objects import UserId
-from app.domain.books.value_objects import BookId
+from app.domain.library_item.value_objects import LibraryItemId
 from app.domain.reading_stats.entities import ReadingStat
 
+if TYPE_CHECKING:
+    from app.domain.reading_stats.value_objects import SessionDate
 
-def make_stat(**kwargs) -> ReadingStat:
-    defaults = {
-        "user_id": UserId(uuid4()),
-        "book_id": BookId(uuid4()),
-    }
-    defaults.update(kwargs)
-    return ReadingStat.create(**defaults)
+
+def make_stat(
+    *,
+    library_item_id: LibraryItemId | None = None,
+    session_date: SessionDate | None = None,
+) -> ReadingStat:
+    return ReadingStat.create(
+        library_item_id=library_item_id or LibraryItemId(uuid4()),
+        session_date=session_date,
+    )
 
 
 def test_create_defaults():
@@ -40,7 +45,6 @@ def test_record_activity_twice_accumulates():
 
 def test_record_activity_computes_avg_wpm():
     stat = make_stat()
-    # 600 words in 60 seconds = 600 WPM
     stat.record_activity(words_read_delta=600, time_spent_delta_sec=60)
     assert stat.avg_wpm is not None
     assert stat.avg_wpm.value == 600

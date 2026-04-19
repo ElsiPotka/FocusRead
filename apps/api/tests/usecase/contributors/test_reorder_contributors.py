@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
 from uuid import uuid4
 
 import pytest
@@ -12,6 +13,11 @@ from app.domain.contributor.value_objects import (
     ContributorRole,
 )
 
+if TYPE_CHECKING:
+    from app.application.contributors.use_cases.reorder_contributors import (
+        ContributorOrderingItem,
+    )
+
 
 async def test_reorder_contributors(uow, book, book_repo, contributor_repo):
     book_repo.get_for_owner.return_value = book
@@ -23,7 +29,7 @@ async def test_reorder_contributors(uow, book, book_repo, contributor_repo):
     ]
 
     use_case = ReorderContributors(uow)
-    ordering = [
+    ordering: list[ContributorOrderingItem] = [
         {"contributor_id": c2.id.value, "role": "author", "position": 0},
         {"contributor_id": c1.id.value, "role": "author", "position": 1},
     ]

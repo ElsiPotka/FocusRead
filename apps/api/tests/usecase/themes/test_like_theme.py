@@ -29,9 +29,7 @@ class TestLikeTheme:
         theme_repo.get.return_value = theme
         theme_repo.has_user_liked.return_value = False
 
-        result = await LikeTheme(uow).execute(
-            theme_id=theme.id.value, user_id=uuid4()
-        )
+        result = await LikeTheme(uow).execute(theme_id=theme.id.value, user_id=uuid4())
 
         assert result is True
         theme_repo.add_like.assert_awaited_once()
@@ -43,9 +41,7 @@ class TestLikeTheme:
         theme_repo.get.return_value = theme
         theme_repo.has_user_liked.return_value = True
 
-        result = await LikeTheme(uow).execute(
-            theme_id=theme.id.value, user_id=uuid4()
-        )
+        result = await LikeTheme(uow).execute(theme_id=theme.id.value, user_id=uuid4())
 
         assert result is False
         theme_repo.remove_like.assert_awaited_once()
@@ -55,6 +51,4 @@ class TestLikeTheme:
         theme_repo.get.return_value = None
 
         with pytest.raises(NotFoundError):
-            await LikeTheme(uow).execute(
-                theme_id=uuid4(), user_id=uuid4()
-            )
+            await LikeTheme(uow).execute(theme_id=uuid4(), user_id=uuid4())

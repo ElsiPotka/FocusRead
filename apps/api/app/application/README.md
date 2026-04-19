@@ -20,7 +20,6 @@ The application layer now covers the main FocusRead backend workflows:
 - `labels/`: create, list, update, delete, assign, unassign
 - `reading/`: reading-session fetch, progress upsert, summary stats, book stats
 - `shelves/`: create, list, get, update, delete, reorder, and shelf-book operations
-- `user_book_state/`: favorite, archive, completed, preferences, and state lookup
 - `common/`: shared contracts and errors used across modules
 
 ## Rules

@@ -45,7 +45,9 @@ class GetStatsSummary:
 
         total_words = sum(s.words_read.value for s in stats)
         total_time = sum(s.time_spent_sec.value for s in stats)
-        books_read = len({s.book_id.value for s in stats if s.words_read.value > 0})
+        books_read = len(
+            {s.library_item_id.value for s in stats if s.words_read.value > 0}
+        )
 
         # Aggregate by date across all books
         daily: dict[date, tuple[int, int]] = {}

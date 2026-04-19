@@ -10,6 +10,9 @@ from app.domain.auth.value_objects import UserId
 from app.domain.books.entities import Book
 from app.domain.books.repositories import BookRepository
 from app.domain.books.value_objects import BookFilePath, BookTitle
+from app.domain.library_item.entities import LibraryItem
+from app.domain.library_item.repositories import LibraryItemRepository
+from app.domain.library_item.value_objects import LibrarySourceKind
 from app.domain.shelf.entities import Shelf
 from app.domain.shelf.repositories import ShelfRepository
 from app.domain.shelf.value_objects import ShelfName
@@ -26,9 +29,15 @@ def shelf_repo():
 
 
 @pytest.fixture
-def uow(book_repo, shelf_repo):
+def library_item_repo():
+    return AsyncMock(spec=LibraryItemRepository)
+
+
+@pytest.fixture
+def uow(book_repo, shelf_repo, library_item_repo):
     mock = AsyncMock(spec=AbstractUnitOfWork)
     mock.books = book_repo
+    mock.library_items = library_item_repo
     mock.shelves = shelf_repo
     return mock
 
@@ -52,4 +61,13 @@ def shelf(user_id) -> Shelf:
     return Shelf.create(
         user_id=user_id,
         name=ShelfName("Test Shelf"),
+    )
+
+
+@pytest.fixture
+def library_item(user_id: UserId, book: Book) -> LibraryItem:
+    return LibraryItem.create(
+        user_id=user_id,
+        book_id=book.id,
+        source_kind=LibrarySourceKind.UPLOAD,
     )

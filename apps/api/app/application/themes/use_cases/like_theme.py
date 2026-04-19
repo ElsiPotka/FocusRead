@@ -18,9 +18,7 @@ class LikeTheme:
     def __init__(self, uow: AbstractUnitOfWork) -> None:
         self._uow = uow
 
-    async def execute(
-        self, *, theme_id: UUID, user_id: UUID
-    ) -> bool:
+    async def execute(self, *, theme_id: UUID, user_id: UUID) -> bool:
         """Returns True if liked, False if unliked."""
         tid = ThemeId(theme_id)
         uid = UserId(user_id)
@@ -29,9 +27,7 @@ class LikeTheme:
         if theme is None:
             raise NotFoundError("Theme not found")
 
-        already_liked = await self._uow.themes.has_user_liked(
-            user_id=uid, theme_id=tid
-        )
+        already_liked = await self._uow.themes.has_user_liked(user_id=uid, theme_id=tid)
 
         if already_liked:
             await self._uow.themes.remove_like(user_id=uid, theme_id=tid)

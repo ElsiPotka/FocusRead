@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from app.domain.auth.value_objects import UserId
-    from app.domain.books.value_objects import BookId
+    from app.domain.library_item.value_objects import LibraryItemId
     from app.domain.reading_stats.entities import ReadingStat
     from app.domain.reading_stats.value_objects import SessionDate
 
@@ -17,12 +17,12 @@ class ReadingStatRepository(ABC):
 
     @abstractmethod
     async def get(
-        self, *, user_id: UserId, book_id: BookId, session_date: SessionDate
+        self, *, library_item_id: LibraryItemId, session_date: SessionDate
     ) -> ReadingStat | None: ...
 
     @abstractmethod
-    async def list_for_book(
-        self, *, user_id: UserId, book_id: BookId
+    async def list_for_library_item(
+        self, *, library_item_id: LibraryItemId
     ) -> list[ReadingStat]: ...
 
     @abstractmethod

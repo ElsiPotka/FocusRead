@@ -4,19 +4,19 @@ from uuid import uuid4
 
 import pytest
 
+from app.domain.book_asset.value_objects import BookAssetId
 from app.domain.book_toc_entry.entities import BookTOCEntry
 from app.domain.book_toc_entry.value_objects import BookTOCEntryId, BookTOCTitle
-from app.domain.books.value_objects import BookId
 
 
 @pytest.fixture
-def book_id() -> BookId:
-    return BookId(uuid4())
+def book_asset_id() -> BookAssetId:
+    return BookAssetId(uuid4())
 
 
-def test_create_entry(book_id):
+def test_create_entry(book_asset_id):
     entry = BookTOCEntry.create(
-        book_id=book_id,
+        book_asset_id=book_asset_id,
         title=BookTOCTitle("Chapter 1"),
         level=1,
         order_index=0,
@@ -29,10 +29,10 @@ def test_create_entry(book_id):
     assert entry.start_word_index is None
 
 
-def test_create_entry_with_all_fields(book_id):
+def test_create_entry_with_all_fields(book_asset_id):
     parent_id = BookTOCEntryId.generate()
     entry = BookTOCEntry.create(
-        book_id=book_id,
+        book_asset_id=book_asset_id,
         title=BookTOCTitle("Section 1.1"),
         level=2,
         order_index=1,
@@ -46,30 +46,30 @@ def test_create_entry_with_all_fields(book_id):
     assert entry.start_word_index == 1000
 
 
-def test_create_rejects_zero_level(book_id):
+def test_create_rejects_zero_level(book_asset_id):
     with pytest.raises(ValueError, match="level must be positive"):
         BookTOCEntry.create(
-            book_id=book_id,
+            book_asset_id=book_asset_id,
             title=BookTOCTitle("Bad"),
             level=0,
             order_index=0,
         )
 
 
-def test_create_rejects_negative_order_index(book_id):
+def test_create_rejects_negative_order_index(book_asset_id):
     with pytest.raises(ValueError, match="order index cannot be negative"):
         BookTOCEntry.create(
-            book_id=book_id,
+            book_asset_id=book_asset_id,
             title=BookTOCTitle("Bad"),
             level=1,
             order_index=-1,
         )
 
 
-def test_create_rejects_zero_page_start(book_id):
+def test_create_rejects_zero_page_start(book_asset_id):
     with pytest.raises(ValueError, match="page start must be positive"):
         BookTOCEntry.create(
-            book_id=book_id,
+            book_asset_id=book_asset_id,
             title=BookTOCTitle("Bad"),
             level=1,
             order_index=0,
@@ -77,10 +77,10 @@ def test_create_rejects_zero_page_start(book_id):
         )
 
 
-def test_create_rejects_negative_start_word_index(book_id):
+def test_create_rejects_negative_start_word_index(book_asset_id):
     with pytest.raises(ValueError, match="start word index cannot be negative"):
         BookTOCEntry.create(
-            book_id=book_id,
+            book_asset_id=book_asset_id,
             title=BookTOCTitle("Bad"),
             level=1,
             order_index=0,
@@ -88,9 +88,9 @@ def test_create_rejects_negative_start_word_index(book_id):
         )
 
 
-def test_reposition(book_id):
+def test_reposition(book_asset_id):
     entry = BookTOCEntry.create(
-        book_id=book_id,
+        book_asset_id=book_asset_id,
         title=BookTOCTitle("Chapter 1"),
         level=1,
         order_index=0,
@@ -107,9 +107,9 @@ def test_reposition(book_id):
     assert entry.updated_at >= old_updated
 
 
-def test_rename(book_id):
+def test_rename(book_asset_id):
     entry = BookTOCEntry.create(
-        book_id=book_id,
+        book_asset_id=book_asset_id,
         title=BookTOCTitle("Old Title"),
         level=1,
         order_index=0,
@@ -118,16 +118,16 @@ def test_rename(book_id):
     assert entry.title.value == "New Title"
 
 
-def test_equality(book_id):
+def test_equality(book_asset_id):
     entry = BookTOCEntry.create(
-        book_id=book_id,
+        book_asset_id=book_asset_id,
         title=BookTOCTitle("Chapter 1"),
         level=1,
         order_index=0,
     )
     same = BookTOCEntry(
         id=entry.id,
-        book_id=book_id,
+        book_asset_id=book_asset_id,
         title=BookTOCTitle("Different"),
         level=1,
         order_index=0,

@@ -29,8 +29,13 @@ class ListBookmarks:
         )
         if book is None:
             raise NotFoundError("Book not found")
-
-        return await self._uow.bookmarks.list_for_book(
+        library_item = await self._uow.library_items.get_active_for_user_book(
             user_id=UserId(user_id),
             book_id=BookId(book_id),
+        )
+        if library_item is None:
+            raise NotFoundError("Library item not found")
+
+        return await self._uow.bookmarks.list_for_library_item(
+            library_item_id=library_item.id,
         )

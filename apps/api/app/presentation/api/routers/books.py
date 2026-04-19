@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import json
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 from uuid import UUID  # noqa: TC003
 
 from fastapi import APIRouter, Depends, File, Form, Query, Security, UploadFile
@@ -19,14 +19,6 @@ from app.application.books.use_cases import (
     UploadBook,
 )
 from app.application.common.errors import NotFoundError
-from app.application.user_book_state import (
-    GetUserBookState,
-    PreferencesUpdate,
-    ToggleArchive,
-    ToggleCompleted,
-    ToggleFavorite,
-    UpdatePreferences,
-)
 from app.domain.auth.value_objects import UserId
 from app.domain.books.entities import BookStatus
 from app.domain.books.filter import BookFilter, BookSortField, SortDirection
@@ -49,14 +41,13 @@ from app.presentation.api.schemas.response import (
     ListResponse,
     MessageResponse,
 )
-from app.presentation.api.schemas.user_book_state import (
-    UpdatePreferencesRequest,
-    UserBookStateResponse,
-)
 
 if TYPE_CHECKING:
     from redis.asyncio import Redis
 
+    from app.application.books.use_cases.update_book_metadata import (
+        BookMetadataUpdates,
+    )
     from app.domain.auth.entities import User
     from app.infrastructure.cache.redis_cache import RedisCache
 
@@ -164,163 +155,6 @@ async def processing_status(
             await pubsub.aclose()
 
     return EventSourceResponse(event_generator())
-
-
-@router.get("/{book_id}/state")
-async def get_book_state(
-    book_id: UUID,
-    current_user: User = Security(get_current_user, scopes=["me"]),
-    uow=Depends(get_uow),
-) -> APIResponse[UserBookStateResponse | None]:
-    use_case = GetUserBookState(uow)
-    state = await use_case.execute(
-        book_id=book_id,
-        user_id=current_user.id.value,
-    )
-    return APIResponse(
-        success=True,
-        data=UserBookStateResponse.from_entity(state) if state else None,
-        message="State retrieved" if state else "No state found",
-    )
-
-
-@router.put("/{book_id}/state")
-async def update_book_state(
-    book_id: UUID,
-    body: UpdatePreferencesRequest,
-    current_user: User = Security(get_current_user, scopes=["me"]),
-    uow=Depends(get_uow),
-) -> APIResponse[UserBookStateResponse]:
-    use_case = UpdatePreferences(uow)
-    state = await use_case.execute(
-        book_id=book_id,
-        user_id=current_user.id.value,
-        update=PreferencesUpdate(
-            preferred_wpm=body.preferred_wpm,
-            preferred_words_per_flash=body.preferred_words_per_flash,
-            skip_images=body.skip_images,
-            ramp_up_enabled=body.ramp_up_enabled,
-        ),
-    )
-    return APIResponse(
-        success=True,
-        data=UserBookStateResponse.from_entity(state),
-        message="Preferences updated",
-    )
-
-
-@router.post("/{book_id}/favorite")
-async def favorite_book(
-    book_id: UUID,
-    current_user: User = Security(get_current_user, scopes=["me"]),
-    uow=Depends(get_uow),
-) -> APIResponse[UserBookStateResponse]:
-    use_case = ToggleFavorite(uow)
-    state = await use_case.execute(
-        book_id=book_id,
-        user_id=current_user.id.value,
-        action="favorite",
-    )
-    return APIResponse(
-        success=True,
-        data=UserBookStateResponse.from_entity(state),
-        message="Book favorited",
-    )
-
-
-@router.delete("/{book_id}/favorite")
-async def unfavorite_book(
-    book_id: UUID,
-    current_user: User = Security(get_current_user, scopes=["me"]),
-    uow=Depends(get_uow),
-) -> APIResponse[UserBookStateResponse]:
-    use_case = ToggleFavorite(uow)
-    state = await use_case.execute(
-        book_id=book_id,
-        user_id=current_user.id.value,
-        action="unfavorite",
-    )
-    return APIResponse(
-        success=True,
-        data=UserBookStateResponse.from_entity(state),
-        message="Book unfavorited",
-    )
-
-
-@router.post("/{book_id}/archive")
-async def archive_book(
-    book_id: UUID,
-    current_user: User = Security(get_current_user, scopes=["me"]),
-    uow=Depends(get_uow),
-) -> APIResponse[UserBookStateResponse]:
-    use_case = ToggleArchive(uow)
-    state = await use_case.execute(
-        book_id=book_id,
-        user_id=current_user.id.value,
-        action="archive",
-    )
-    return APIResponse(
-        success=True,
-        data=UserBookStateResponse.from_entity(state),
-        message="Book archived",
-    )
-
-
-@router.delete("/{book_id}/archive")
-async def unarchive_book(
-    book_id: UUID,
-    current_user: User = Security(get_current_user, scopes=["me"]),
-    uow=Depends(get_uow),
-) -> APIResponse[UserBookStateResponse]:
-    use_case = ToggleArchive(uow)
-    state = await use_case.execute(
-        book_id=book_id,
-        user_id=current_user.id.value,
-        action="unarchive",
-    )
-    return APIResponse(
-        success=True,
-        data=UserBookStateResponse.from_entity(state),
-        message="Book unarchived",
-    )
-
-
-@router.post("/{book_id}/completed")
-async def complete_book(
-    book_id: UUID,
-    current_user: User = Security(get_current_user, scopes=["me"]),
-    uow=Depends(get_uow),
-) -> APIResponse[UserBookStateResponse]:
-    use_case = ToggleCompleted(uow)
-    state = await use_case.execute(
-        book_id=book_id,
-        user_id=current_user.id.value,
-        action="complete",
-    )
-    return APIResponse(
-        success=True,
-        data=UserBookStateResponse.from_entity(state),
-        message="Book marked completed",
-    )
-
-
-@router.delete("/{book_id}/completed")
-async def reopen_book(
-    book_id: UUID,
-    current_user: User = Security(get_current_user, scopes=["me"]),
-    uow=Depends(get_uow),
-) -> APIResponse[UserBookStateResponse]:
-    use_case = ToggleCompleted(uow)
-    state = await use_case.execute(
-        book_id=book_id,
-        user_id=current_user.id.value,
-        action="reopen",
-    )
-    return APIResponse(
-        success=True,
-        data=UserBookStateResponse.from_entity(state),
-        message="Book reopened",
-    )
 
 
 @router.get("/{book_id}/chunks/resolve")
@@ -527,10 +361,14 @@ async def update_book(
     uow=Depends(get_uow),
 ) -> APIResponse[BookResponse]:
     use_case = UpdateBookMetadata(uow)
+    updates = cast(
+        "BookMetadataUpdates",
+        body.model_dump(exclude_unset=True, mode="python"),
+    )
     book = await use_case.execute(
         book_id=book_id,
         owner_user_id=current_user.id.value,
-        updates=body.model_dump(exclude_unset=True, mode="python"),
+        updates=updates,
     )
     return APIResponse(
         success=True,
@@ -565,7 +403,7 @@ async def get_book_toc(
         book_id=book_id,
         owner_user_id=current_user.id.value,
     )
-    data = [BookTOCEntryResponse.from_entity(e) for e in entries]
+    data = [BookTOCEntryResponse.from_entity(e, book_id=book_id) for e in entries]
     return ListResponse(
         success=True,
         data=data,

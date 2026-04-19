@@ -33,9 +33,7 @@ class TestForkTheme:
         theme_repo.get.return_value = source
 
         uid = uuid4()
-        result = await ForkTheme(uow).execute(
-            theme_id=source.id.value, user_id=uid
-        )
+        result = await ForkTheme(uow).execute(theme_id=source.id.value, user_id=uid)
 
         assert result.name.value == "Source Theme (fork)"
         assert result.forked_from_id == source.id
@@ -51,9 +49,7 @@ class TestForkTheme:
         source = _make_theme(is_public=True, is_system=True)
         theme_repo.get.return_value = source
 
-        result = await ForkTheme(uow).execute(
-            theme_id=source.id.value, user_id=uuid4()
-        )
+        result = await ForkTheme(uow).execute(theme_id=source.id.value, user_id=uuid4())
 
         assert result.forked_from_id == source.id
 
@@ -63,15 +59,11 @@ class TestForkTheme:
         theme_repo.get.return_value = source
 
         with pytest.raises(NotFoundError):
-            await ForkTheme(uow).execute(
-                theme_id=source.id.value, user_id=uuid4()
-            )
+            await ForkTheme(uow).execute(theme_id=source.id.value, user_id=uuid4())
 
     @pytest.mark.anyio
     async def test_fork_nonexistent_theme(self, uow, theme_repo):
         theme_repo.get.return_value = None
 
         with pytest.raises(NotFoundError):
-            await ForkTheme(uow).execute(
-                theme_id=uuid4(), user_id=uuid4()
-            )
+            await ForkTheme(uow).execute(theme_id=uuid4(), user_id=uuid4())

@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING
 from sqlalchemy import func, select
 
 from app.infrastructure.persistence.models.book import BookModel
+from app.infrastructure.persistence.models.book_asset import BookAssetModel
 from app.infrastructure.persistence.models.user import UserModel
 
 if TYPE_CHECKING:
@@ -34,12 +35,11 @@ class GetPlatformStats:
             select(func.count()).select_from(BookModel)
         )
         status_rows = await self._session.execute(
-            select(BookModel.status, func.count())
-            .group_by(BookModel.status)
+            select(BookAssetModel.processing_status, func.count()).group_by(
+                BookAssetModel.processing_status
+            )
         )
-        status_map: dict[str, int] = {
-            row[0]: row[1] for row in status_rows.all()
-        }
+        status_map: dict[str, int] = {row[0]: row[1] for row in status_rows.all()}
 
         return PlatformStats(
             total_users=user_count or 0,

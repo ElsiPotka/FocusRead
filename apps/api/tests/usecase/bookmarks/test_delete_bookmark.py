@@ -9,17 +9,17 @@ from app.application.common.errors import NotFoundError
 from app.domain.bookmark.entities import Bookmark
 
 
-async def test_delete_bookmark(uow, bookmark_repo, book):
+async def test_delete_bookmark(uow, bookmark_repo, library_item_repo, library_item):
     bookmark = Bookmark.create(
-        user_id=book.owner_user_id,
-        book_id=book.id,
+        library_item_id=library_item.id,
         word_index=100,
     )
-    bookmark_repo.get_for_owner.return_value = bookmark
+    bookmark_repo.get.return_value = bookmark
+    library_item_repo.get.return_value = library_item
 
     await DeleteBookmark(uow).execute(
         bookmark_id=bookmark.id.value,
-        user_id=book.owner_user_id.value,
+        user_id=library_item.user_id.value,
     )
 
     bookmark_repo.delete.assert_awaited_once()
@@ -27,7 +27,7 @@ async def test_delete_bookmark(uow, bookmark_repo, book):
 
 
 async def test_delete_bookmark_not_found(uow, bookmark_repo):
-    bookmark_repo.get_for_owner.return_value = None
+    bookmark_repo.get.return_value = None
 
     with pytest.raises(NotFoundError, match="Bookmark not found"):
         await DeleteBookmark(uow).execute(

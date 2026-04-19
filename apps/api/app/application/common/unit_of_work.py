@@ -12,32 +12,38 @@ if TYPE_CHECKING:
         SessionRepository,
         UserRepository,
     )
+    from app.domain.book_asset.repositories import BookAssetRepository
     from app.domain.book_chunks.repositories import BookChunkRepository
     from app.domain.book_toc_entry.repositories import BookTOCEntryRepository
     from app.domain.bookmark.repositories import BookmarkRepository
     from app.domain.books.repositories import BookRepository
     from app.domain.contributor.repositories import ContributorRepository
     from app.domain.label.repositories import LabelRepository
+    from app.domain.library_item.repositories import LibraryItemRepository
+    from app.domain.marketplace_listing.repositories import (
+        MarketplaceListingRepository,
+    )
     from app.domain.reading_sessions.repositories import ReadingSessionRepository
     from app.domain.reading_stats.repositories import ReadingStatRepository
     from app.domain.role.repositories import RoleRepository
     from app.domain.shelf.repositories import ShelfRepository
     from app.domain.theme.repositories import ThemeRepository
-    from app.domain.user_book_state.repositories import UserBookStateRepository
 
 
 class AbstractUnitOfWork(ABC):
     books: BookRepository
+    book_assets: BookAssetRepository
     book_chunks: BookChunkRepository
     book_toc_entries: BookTOCEntryRepository
     bookmarks: BookmarkRepository
     contributors: ContributorRepository
     labels: LabelRepository
+    library_items: LibraryItemRepository
+    marketplace_listings: MarketplaceListingRepository
     reading_sessions: ReadingSessionRepository
     reading_stats: ReadingStatRepository
     shelves: ShelfRepository
     themes: ThemeRepository
-    user_book_states: UserBookStateRepository
     users: UserRepository
     roles: RoleRepository
     accounts: AccountRepository
