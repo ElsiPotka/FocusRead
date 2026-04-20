@@ -71,6 +71,9 @@ line-ending = "auto"
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 asyncio_mode = "auto"
+filterwarnings = [
+    "ignore:.*iscoroutinefunction.*:DeprecationWarning:slowapi\\.extension",
+]
 
 [tool.basedpyright]
 pythonVersion = "3.14"

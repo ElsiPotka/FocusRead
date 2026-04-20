@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from app.application.common.errors import ConflictError, NotFoundError
+from app.infrastructure.logging.logger import log
 
 if TYPE_CHECKING:
     from app.application.common.unit_of_work import AbstractUnitOfWork
@@ -39,4 +40,11 @@ class DeleteBookAsset:
         storage_key = asset.storage_key.value
         await self._uow.book_assets.delete(asset_id=asset_id)
         await self._uow.commit()
-        await self._file_storage.delete(storage_key=storage_key)
+        try:
+            await self._file_storage.delete(storage_key=storage_key)
+        except Exception:
+            log.exception(
+                "Asset {} row deleted but storage cleanup failed for {}",
+                asset_id.value,
+                storage_key,
+            )

@@ -23,6 +23,7 @@ if TYPE_CHECKING:
 
     from app.application.common.unit_of_work import AbstractUnitOfWork
     from app.domain.book_asset.entities import BookAsset
+    from app.infrastructure.storage.file_storage import FileStorage
 
 
 @dataclass(frozen=True, slots=True)
@@ -30,6 +31,8 @@ class RegisterBookUploadResult:
     book: Book
     asset: BookAsset
     library_item: LibraryItem
+    stranded_storage_key: str | None = None
+    stranded_storage_deleted: bool = False
 
 
 class RegisterBookUpload:
@@ -42,8 +45,13 @@ class RegisterBookUpload:
     merchant ingestion.
     """
 
-    def __init__(self, uow: AbstractUnitOfWork) -> None:
+    def __init__(
+        self,
+        uow: AbstractUnitOfWork,
+        file_storage: FileStorage | None = None,
+    ) -> None:
         self.uow = uow
+        self._file_storage = file_storage
 
     async def execute(
         self,
@@ -71,6 +79,14 @@ class RegisterBookUpload:
         )
         result = await RegisterAssetForProcessing(self.uow).execute(registration)
         asset = result.asset
+        stranded_storage_key: str | None = None
+        stranded_storage_deleted = False
+
+        if not result.created and asset.storage_key.value != storage_key:
+            stranded_storage_key = storage_key
+            if self._file_storage is not None:
+                await self._file_storage.delete(storage_key=storage_key)
+                stranded_storage_deleted = True
 
         book = Book.create(
             primary_asset_id=asset.id,
@@ -94,5 +110,9 @@ class RegisterBookUpload:
             RegisterAssetForProcessing.enqueue_processing(asset.id)
 
         return RegisterBookUploadResult(
-            book=book, asset=asset, library_item=library_item
+            book=book,
+            asset=asset,
+            library_item=library_item,
+            stranded_storage_key=stranded_storage_key,
+            stranded_storage_deleted=stranded_storage_deleted,
         )

@@ -7,6 +7,8 @@ from uuid import UUID
 
 from celery.utils.log import get_task_logger
 
+from app.domain.book_asset.entities import BookAsset
+from app.domain.book_asset.value_objects import ProcessingStatus
 from app.infrastructure.cache.keys import (
     book_asset_chunk_key,
     book_asset_processing_channel,
@@ -85,12 +87,48 @@ async def _publish_asset_progress(
     await client.publish(channel, json.dumps(event))
 
 
+async def _maybe_short_circuit_existing_asset(
+    *, asset_id: str, asset: BookAsset
+) -> dict[str, str] | None:
+    if asset.processing_status is ProcessingStatus.READY:
+        logger.info("Asset %s already ready — skipping", asset_id)
+        chunks_done = asset.total_chunks.value if asset.total_chunks else 0
+        await _publish_asset_progress(
+            asset_id,
+            status="ready",
+            progress=100,
+            chunks_ready=chunks_done,
+            total_chunks=chunks_done,
+        )
+        return {
+            "status": "ready",
+            "asset_id": asset_id,
+            "chunks": str(chunks_done),
+        }
+
+    if asset.processing_status is ProcessingStatus.PROCESSING:
+        logger.info("Asset %s already processing — skipping duplicate run", asset_id)
+        await _publish_asset_progress(
+            asset_id,
+            status="processing",
+            progress=0,
+            chunks_ready=0,
+            total_chunks=asset.total_chunks.value if asset.total_chunks else None,
+        )
+        return {
+            "status": "processing",
+            "asset_id": asset_id,
+            "reason": "already_processing",
+        }
+
+    return None
+
+
 async def _process_book_asset(asset_id: str) -> dict[str, str]:
     from app.domain.book_asset.value_objects import (
         BookAssetId,
         PageCount,
         ProcessingError,
-        ProcessingStatus,
         TotalChunks,
         WordCount,
     )
@@ -124,21 +162,12 @@ async def _process_book_asset(asset_id: str) -> dict[str, str]:
             logger.error("Asset %s not found", asset_id)
             return {"status": "error", "reason": "asset_not_found"}
 
-        if asset.processing_status is ProcessingStatus.READY:
-            logger.info("Asset %s already ready — skipping", asset_id)
-            chunks_done = asset.total_chunks.value if asset.total_chunks else 0
-            await _publish_asset_progress(
-                asset_id,
-                status="ready",
-                progress=100,
-                chunks_ready=chunks_done,
-                total_chunks=chunks_done,
-            )
-            return {
-                "status": "ready",
-                "asset_id": asset_id,
-                "chunks": str(chunks_done),
-            }
+        short_circuit = await _maybe_short_circuit_existing_asset(
+            asset_id=asset_id,
+            asset=asset,
+        )
+        if short_circuit is not None:
+            return short_circuit
 
         try:
             asset.mark_processing()

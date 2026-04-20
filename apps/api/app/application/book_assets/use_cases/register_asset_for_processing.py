@@ -4,6 +4,8 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, Protocol, cast
 from uuid import UUID  # noqa: TC003
 
+from sqlalchemy.exc import IntegrityError
+
 from app.domain.auth.value_objects import UserId
 from app.domain.book_asset.entities import BookAsset
 from app.domain.book_asset.value_objects import (
@@ -72,8 +74,10 @@ class RegisterAssetForProcessing:
 
     Transaction contract: `execute` persists via the unit of work but
     does NOT commit — callers typically compose with Book and
-    LibraryItem in the same transaction. After committing, call
-    `enqueue_processing()` with the returned asset id.
+    LibraryItem in the same transaction. It *does* flush the asset
+    insert so sha256 uniqueness conflicts surface before callers stage
+    additional rows. After committing, call `enqueue_processing()`
+    with the returned asset id.
     """
 
     def __init__(self, uow: AbstractUnitOfWork) -> None:
@@ -82,9 +86,8 @@ class RegisterAssetForProcessing:
     async def execute(
         self, registration: AssetRegistration
     ) -> AssetRegistrationResult:
-        existing = await self._uow.book_assets.get_by_sha256(
-            Sha256(registration.sha256)
-        )
+        sha256 = Sha256(registration.sha256)
+        existing = await self._uow.book_assets.get_by_sha256(sha256)
         if existing is not None:
             return AssetRegistrationResult(
                 asset=existing,
@@ -114,6 +117,23 @@ class RegisterAssetForProcessing:
             ),
         )
         await self._uow.book_assets.save(asset)
+        try:
+            await self._uow.flush()
+        except IntegrityError:
+            # Another transaction won the same-sha256 race. Roll back the
+            # failed insert and re-read the canonical asset so callers can
+            # continue with dedup semantics instead of a raw DB error.
+            await self._uow.rollback()
+            existing = await self._uow.book_assets.get_by_sha256(sha256)
+            if existing is None:
+                raise
+            return AssetRegistrationResult(
+                asset=existing,
+                created=False,
+                needs_processing=(
+                    existing.processing_status is not ProcessingStatus.READY
+                ),
+            )
         return AssetRegistrationResult(
             asset=asset, created=True, needs_processing=True
         )

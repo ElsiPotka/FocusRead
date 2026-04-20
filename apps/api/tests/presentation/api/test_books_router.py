@@ -22,8 +22,10 @@ from app.domain.books.value_objects import (
     BookTitle,
 )
 from app.domain.user.entities import User
+from app.infrastructure.cache.redis import get_cache
 from app.infrastructure.config.settings import settings
 from app.infrastructure.persistence.unit_of_work import get_uow
+from app.infrastructure.storage.file_storage import get_file_storage
 from app.presentation.api.exception_handlers import register_exception_handlers
 from app.presentation.api.middleware.auth import get_current_user
 from app.presentation.api.routers.books import router as books_router
@@ -64,11 +66,12 @@ def _build_book() -> Book:
     )
 
 
-def _build_uow(*, books):
-    return SimpleNamespace(books=books, commit=AsyncMock())
+def _build_uow(**attrs):
+    attrs.setdefault("commit", AsyncMock())
+    return SimpleNamespace(**attrs)
 
 
-def _create_client(*, uow) -> TestClient:
+def _create_client(*, uow, cache=None, storage=None) -> TestClient:
     app = FastAPI()
     register_exception_handlers(app)
     app.include_router(books_router, prefix=settings.API_V1_PREFIX)
@@ -81,6 +84,10 @@ def _create_client(*, uow) -> TestClient:
 
     app.dependency_overrides[get_current_user] = fake_get_current_user
     app.dependency_overrides[get_uow] = lambda: uow
+    if cache is not None:
+        app.dependency_overrides[get_cache] = lambda: cache
+    if storage is not None:
+        app.dependency_overrides[get_file_storage] = lambda: storage
     return TestClient(app)
 
 
@@ -150,20 +157,43 @@ class TestBooksRoutes:
 
     def test_deletes_book(self):
         book = _build_book()
+        item = SimpleNamespace(id=uuid4())
         books = SimpleNamespace(
             list_for_owner=AsyncMock(),
             get_for_owner=AsyncMock(return_value=book),
+            get=AsyncMock(return_value=book),
             save=AsyncMock(),
             delete=AsyncMock(),
         )
-        uow = _build_uow(books=books)
-        client = _create_client(uow=uow)
+        library_items = SimpleNamespace(
+            get_active_for_user_book=AsyncMock(return_value=item),
+            delete=AsyncMock(),
+            count_active_for_book=AsyncMock(return_value=1),
+        )
+        marketplace_listings = SimpleNamespace(
+            count_active_for_book=AsyncMock(return_value=0),
+        )
+        book_assets = SimpleNamespace(
+            get=AsyncMock(),
+            delete=AsyncMock(),
+        )
+        cache = AsyncMock()
+        storage = AsyncMock()
+        uow = _build_uow(
+            books=books,
+            library_items=library_items,
+            marketplace_listings=marketplace_listings,
+            book_assets=book_assets,
+        )
+        client = _create_client(uow=uow, cache=cache, storage=storage)
 
         response = client.delete(f"{settings.API_V1_PREFIX}/books/{book.id.value}")
 
         assert response.status_code == 200
         assert response.json() == {"success": True, "message": "Book deleted"}
-        books.delete.assert_awaited_once_with(book_id=book.id)
+        library_items.delete.assert_awaited_once_with(item_id=item.id)
+        books.delete.assert_not_awaited()
+        cache.delete.assert_awaited_once()
         uow.commit.assert_awaited_once()
 
     def test_returns_not_found_for_missing_book(self):

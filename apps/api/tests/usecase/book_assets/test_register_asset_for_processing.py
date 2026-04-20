@@ -5,6 +5,7 @@ from unittest.mock import AsyncMock, patch
 from uuid import uuid4
 
 import pytest
+from sqlalchemy.exc import IntegrityError
 
 from app.application.book_assets.use_cases import (
     AssetRegistration,
@@ -75,6 +76,7 @@ async def test_creates_new_asset_when_sha256_not_seen(uow, book_asset_repo):
     assert result.asset.sha256.value == "a" * 64
     assert result.asset.storage_key.value == "assets/new/x.pdf"
     book_asset_repo.save.assert_awaited_once()
+    uow.flush.assert_awaited_once()
 
 
 async def test_uses_provided_asset_id_when_supplied(uow):
@@ -90,6 +92,7 @@ async def test_uses_provided_asset_id_when_supplied(uow):
     result = await RegisterAssetForProcessing(uow).execute(registration)
 
     assert result.asset.id.value == pre_id
+    uow.flush.assert_awaited_once()
 
 
 async def test_returns_existing_asset_on_sha256_hit_skips_save(uow, book_asset_repo):
@@ -108,6 +111,7 @@ async def test_returns_existing_asset_on_sha256_hit_skips_save(uow, book_asset_r
     assert result.needs_processing is False  # READY → no enqueue
     assert result.asset is existing
     book_asset_repo.save.assert_not_called()
+    uow.flush.assert_not_awaited()
 
 
 @pytest.mark.parametrize(
@@ -129,6 +133,33 @@ async def test_dedup_hit_with_non_ready_status_still_requests_processing(
 
     assert result.created is False
     assert result.needs_processing is True
+    uow.flush.assert_not_awaited()
+
+
+async def test_recovers_cleanly_when_concurrent_insert_wins_race(uow, book_asset_repo):
+    existing = _existing_asset(status=ProcessingStatus.READY)
+    book_asset_repo.get_by_sha256.side_effect = [None, existing]
+    uow.flush.side_effect = IntegrityError(
+        statement="insert into book_assets ...",
+        params={},
+        orig=Exception("duplicate key value violates unique constraint"),
+    )
+
+    registration = AssetRegistration(
+        sha256="a" * 64,
+        storage_key="assets/new/x.pdf",
+        file_size_bytes=42,
+        original_filename="x.pdf",
+    )
+
+    result = await RegisterAssetForProcessing(uow).execute(registration)
+
+    assert result.asset is existing
+    assert result.created is False
+    assert result.needs_processing is False
+    book_asset_repo.save.assert_awaited_once()
+    uow.flush.assert_awaited_once()
+    uow.rollback.assert_awaited_once()
 
 
 @patch("app.workers.task.process_book_asset_task")
