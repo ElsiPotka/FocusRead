@@ -41,4 +41,13 @@ class MarketplaceListingRepository(ABC):
     ) -> list[MarketplaceListing]: ...
 
     @abstractmethod
+    async def count_active_for_book(self, *, book_id: BookId) -> int:
+        """Count non-archived listings referencing a book.
+
+        Used as a reference-safety check when considering whether a
+        catalog `Book` can be torn down. A book with any live listing
+        (draft/published/unpublished) is not a candidate for deletion.
+        """
+
+    @abstractmethod
     async def delete(self, *, listing_id: MarketplaceListingId) -> None: ...

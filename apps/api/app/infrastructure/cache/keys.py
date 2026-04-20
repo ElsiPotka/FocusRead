@@ -13,12 +13,12 @@ def book_metadata_key(book_id: str) -> str:
     return build_cache_key("book", book_id, "metadata")
 
 
-def book_chunk_key(book_id: str, chunk_index: int) -> str:
-    return build_cache_key("book", book_id, "chunk", chunk_index)
+def book_asset_chunk_key(asset_id: str, chunk_index: int) -> str:
+    return build_cache_key("book-asset", asset_id, "chunk", chunk_index)
 
 
-def book_processing_channel(book_id: str) -> str:
-    return build_cache_key("book", book_id, "processing")
+def book_asset_processing_channel(asset_id: str) -> str:
+    return build_cache_key("book-asset", asset_id, "processing")
 
 
 def reading_session_key(user_id: str, book_id: str) -> str:

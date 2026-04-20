@@ -64,6 +64,37 @@ class SqlAlchemyBookTOCEntryRepository(BookTOCEntryRepository):
         for entry in entries:
             await self.save(entry)
 
+    async def upsert_by_asset_order(self, entry: BookTOCEntry) -> BookTOCEntry:
+        stmt = select(BookTOCEntryModel).where(
+            BookTOCEntryModel.book_asset_id == entry.book_asset_id.value,
+            BookTOCEntryModel.order_index == entry.order_index,
+        )
+        result = await self.session.execute(stmt)
+        existing = result.scalar_one_or_none()
+        if existing is None:
+            model = BookTOCEntryModel(
+                id=entry.id.value,
+                book_asset_id=entry.book_asset_id.value,
+                parent_id=entry.parent_id.value if entry.parent_id else None,
+                title=entry.title.value,
+                level=entry.level,
+                order_index=entry.order_index,
+                page_start=entry.page_start,
+                start_word_index=entry.start_word_index,
+                created_at=entry.created_at,
+                updated_at=entry.updated_at,
+            )
+            self.session.add(model)
+            return entry
+
+        existing.parent_id = entry.parent_id.value if entry.parent_id else None
+        existing.title = entry.title.value
+        existing.level = entry.level
+        existing.page_start = entry.page_start
+        existing.start_word_index = entry.start_word_index
+        existing.updated_at = entry.updated_at
+        return self._to_entity(existing)
+
     async def delete_for_asset(self, *, book_asset_id: BookAssetId) -> None:
         stmt = delete(BookTOCEntryModel).where(
             BookTOCEntryModel.book_asset_id == book_asset_id.value,

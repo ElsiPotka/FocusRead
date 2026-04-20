@@ -17,6 +17,17 @@ class BookChunkRepository(ABC):
     async def save_many(self, chunks: list[BookChunk]) -> None: ...
 
     @abstractmethod
+    async def upsert_by_asset_index(self, chunk: BookChunk) -> BookChunk:
+        """Idempotent upsert keyed on (book_asset_id, chunk_index).
+
+        If a chunk already exists at `(chunk.book_asset_id, chunk.chunk_index)`,
+        its content is updated in place (reusing the existing primary key so
+        the `uq_book_chunks_book_asset_id_chunk_index` constraint resumes
+        partial extraction runs safely). Otherwise the incoming chunk is
+        inserted. Returns the persisted entity.
+        """
+
+    @abstractmethod
     async def get_by_index(
         self, *, book_asset_id: BookAssetId, chunk_index: ChunkIndex
     ) -> BookChunk | None: ...

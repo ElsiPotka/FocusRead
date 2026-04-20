@@ -8,8 +8,8 @@ from uuid import UUID
 from celery.utils.log import get_task_logger
 
 from app.infrastructure.cache.keys import (
-    book_chunk_key,
-    book_processing_channel,
+    book_asset_chunk_key,
+    book_asset_processing_channel,
     build_cache_key,
 )
 from app.infrastructure.cache.redis import redis_manager
@@ -60,8 +60,8 @@ def ping_redis_task() -> dict[str, str]:
     return asyncio.run(_ping_redis())
 
 
-async def _publish_progress(
-    book_id: str,
+async def _publish_asset_progress(
+    asset_id: str,
     *,
     status: str,
     progress: int,
@@ -73,8 +73,8 @@ async def _publish_progress(
     if client is None:
         return
 
-    channel = book_processing_channel(book_id)
-    event = {
+    channel = book_asset_processing_channel(asset_id)
+    event: dict[str, object] = {
         "status": status,
         "progress": progress,
         "chunks_ready": chunks_ready,
@@ -85,7 +85,15 @@ async def _publish_progress(
     await client.publish(channel, json.dumps(event))
 
 
-async def _process_book(book_id: str) -> dict[str, str]:
+async def _process_book_asset(asset_id: str) -> dict[str, str]:
+    from app.domain.book_asset.value_objects import (
+        BookAssetId,
+        PageCount,
+        ProcessingError,
+        ProcessingStatus,
+        TotalChunks,
+        WordCount,
+    )
     from app.domain.book_chunks.entities import BookChunk
     from app.domain.book_chunks.value_objects import (
         ChunkIndex,
@@ -93,50 +101,63 @@ async def _process_book(book_id: str) -> dict[str, str]:
         ChunkWordData,
         StartWordIndex,
     )
-    from app.domain.books.value_objects import (
-        BookId,
-        BookPageCount,
-        BookProcessingError,
-        BookTotalChunks,
-        BookWordCount,
-    )
     from app.infrastructure.persistence.unit_of_work import SqlAlchemyUnitOfWork
+    from app.infrastructure.storage.file_storage import get_file_storage
     from app.workers.pdf_processor import PDFProcessor
 
     _ensure_worker_infra_initialized()
 
     cache = RedisCache(redis_manager.client) if redis_manager.client else None
+    file_storage = get_file_storage()
 
     try:
-        typed_book_id = BookId(UUID(book_id))
+        typed_asset_id = BookAssetId(UUID(asset_id))
     except ValueError:
-        logger.error("Invalid book id %s", book_id)
-        return {"status": "error", "reason": "invalid_book_id"}
+        logger.error("Invalid asset id %s", asset_id)
+        return {"status": "error", "reason": "invalid_asset_id"}
 
     async with sessionmanager.session() as session:
         uow = SqlAlchemyUnitOfWork(session)
 
-        book = await uow.books.get(typed_book_id)
-        if book is None:
-            logger.error("Book %s not found", book_id)
-            return {"status": "error", "reason": "book_not_found"}
+        asset = await uow.book_assets.get(typed_asset_id)
+        if asset is None:
+            logger.error("Asset %s not found", asset_id)
+            return {"status": "error", "reason": "asset_not_found"}
+
+        if asset.processing_status is ProcessingStatus.READY:
+            logger.info("Asset %s already ready — skipping", asset_id)
+            chunks_done = asset.total_chunks.value if asset.total_chunks else 0
+            await _publish_asset_progress(
+                asset_id,
+                status="ready",
+                progress=100,
+                chunks_ready=chunks_done,
+                total_chunks=chunks_done,
+            )
+            return {
+                "status": "ready",
+                "asset_id": asset_id,
+                "chunks": str(chunks_done),
+            }
 
         try:
-            book.mark_processing()
-            await uow.books.save(book)
+            asset.mark_processing()
+            await uow.book_assets.save(asset)
             await uow.commit()
         except Exception:
-            logger.exception("Failed to mark book %s as processing", book_id)
+            logger.exception("Failed to mark asset %s as processing", asset_id)
             raise
 
-        try:
-            with PDFProcessor(book.file_path.value) as processor:
-                page_count = processor.page_count
-                book.update_metadata(page_count=BookPageCount(page_count))
-                await uow.books.save(book)
-                await uow.commit()
+        storage_path = file_storage.resolve_path(
+            storage_key=asset.storage_key.value,
+        )
 
-                estimated_chunks: int | None = None
+        try:
+            with PDFProcessor(storage_path) as processor:
+                page_count = processor.page_count
+                asset.update_processing_details(page_count=PageCount(page_count))
+                await uow.book_assets.save(asset)
+                await uow.commit()
 
                 running_word_count = 0
                 chunk_count = 0
@@ -144,7 +165,7 @@ async def _process_book(book_id: str) -> dict[str, str]:
 
                 for raw_chunk in processor.extract_chunks():
                     chunk_entity = BookChunk.create(
-                        book_asset_id=book.primary_asset_id,
+                        book_asset_id=asset.id,
                         chunk_index=ChunkIndex(chunk_count),
                         start_word_index=StartWordIndex(running_word_count),
                         word_data=ChunkWordData(raw_chunk.tokens),
@@ -152,13 +173,12 @@ async def _process_book(book_id: str) -> dict[str, str]:
                         page_start=raw_chunk.page_start,
                         page_end=raw_chunk.page_end,
                     )
-
-                    await uow.book_chunks.save(chunk_entity)
+                    await uow.book_chunks.upsert_by_asset_index(chunk_entity)
                     await uow.commit()
 
                     if cache is not None:
                         await cache.set_json(
-                            book_chunk_key(book_id, chunk_count),
+                            book_asset_chunk_key(asset_id, chunk_count),
                             raw_chunk.tokens,
                             compress=True,
                             ttl_seconds=CHUNK_CACHE_TTL_SECONDS,
@@ -174,35 +194,34 @@ async def _process_book(book_id: str) -> dict[str, str]:
                     else:
                         progress = 0
 
-                    await _publish_progress(
-                        book_id,
+                    await _publish_asset_progress(
+                        asset_id,
                         status="processing",
                         progress=progress,
                         chunks_ready=chunk_count,
-                        total_chunks=estimated_chunks,
                     )
 
                     logger.info(
-                        "Book %s: chunk %d ready (%d words)",
-                        book_id,
+                        "Asset %s: chunk %d ready (%d words)",
+                        asset_id,
                         chunk_count - 1,
                         raw_chunk.word_count,
                     )
 
                 any_images = any_images or processor.has_images
 
-            book.update_processing_details(
-                word_count=BookWordCount(running_word_count),
-                total_chunks=BookTotalChunks(chunk_count),
+            asset.update_processing_details(
+                word_count=WordCount(running_word_count),
+                total_chunks=TotalChunks(chunk_count),
                 has_images=any_images,
                 toc_extracted=False,
             )
-            book.mark_ready()
-            await uow.books.save(book)
+            asset.mark_ready()
+            await uow.book_assets.save(asset)
             await uow.commit()
 
-            await _publish_progress(
-                book_id,
+            await _publish_asset_progress(
+                asset_id,
                 status="ready",
                 progress=100,
                 chunks_ready=chunk_count,
@@ -210,30 +229,28 @@ async def _process_book(book_id: str) -> dict[str, str]:
             )
 
             logger.info(
-                "Book %s processing complete: %d chunks, %d words",
-                book_id,
+                "Asset %s processing complete: %d chunks, %d words",
+                asset_id,
                 chunk_count,
                 running_word_count,
             )
             return {
                 "status": "ready",
-                "book_id": book_id,
+                "asset_id": asset_id,
                 "chunks": str(chunk_count),
                 "words": str(running_word_count),
             }
 
         except Exception as exc:
-            logger.exception("Book %s processing failed", book_id)
+            logger.exception("Asset %s processing failed", asset_id)
 
             error_msg = str(exc)[:5000]
-            book.mark_error(
-                BookProcessingError(error_msg) if error_msg.strip() else None
-            )
-            await uow.books.save(book)
+            asset.mark_error(ProcessingError(error_msg) if error_msg.strip() else None)
+            await uow.book_assets.save(asset)
             await uow.commit()
 
-            await _publish_progress(
-                book_id,
+            await _publish_asset_progress(
+                asset_id,
                 status="error",
                 progress=0,
                 chunks_ready=0,
@@ -243,15 +260,15 @@ async def _process_book(book_id: str) -> dict[str, str]:
 
 
 @celery_app.task(
-    name="app.workers.task.process_book",
+    name="app.workers.task.process_book_asset",
     bind=True,
     max_retries=2,
     default_retry_delay=30,
 )
-def process_book_task(self, book_id: str) -> dict[str, str]:
-    logger.info("Starting PDF processing for book %s", book_id)
+def process_book_asset_task(self, asset_id: str) -> dict[str, str]:
+    logger.info("Starting PDF processing for asset %s", asset_id)
     try:
-        return asyncio.run(_process_book(book_id))
+        return asyncio.run(_process_book_asset(asset_id))
     except Exception as exc:
-        logger.exception("Process book task failed for %s", book_id)
+        logger.exception("Process book-asset task failed for %s", asset_id)
         raise self.retry(exc=exc) from exc

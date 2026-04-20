@@ -8,11 +8,11 @@ from fastapi import APIRouter, Depends, File, Form, Query, Security, UploadFile
 from sse_starlette.sse import EventSourceResponse
 
 from app.application.books.use_cases import (
-    DeleteBook,
     GetBook,
     GetBookChunk,
     GetBookTOC,
     ListBooks,
+    RemoveLibraryItem,
     ResolveBookChunk,
     SearchBooks,
     UpdateBookMetadata,
@@ -23,7 +23,7 @@ from app.domain.auth.value_objects import UserId
 from app.domain.books.entities import BookStatus
 from app.domain.books.filter import BookFilter, BookSortField, SortDirection
 from app.domain.books.value_objects import BookId
-from app.infrastructure.cache.keys import book_processing_channel
+from app.infrastructure.cache.keys import book_asset_processing_channel
 from app.infrastructure.cache.redis import get_cache, get_redis
 from app.infrastructure.persistence.unit_of_work import get_uow
 from app.infrastructure.storage.file_storage import FileStorage, get_file_storage
@@ -78,7 +78,7 @@ async def upload_book(
         raise NotFoundError("File does not appear to be a valid PDF.")
 
     use_case = UploadBook(uow, storage)
-    book = await use_case.execute(
+    result = await use_case.execute(
         owner_user_id=current_user.id.value,
         title=title,
         source_filename=file.filename or "upload.pdf",
@@ -87,7 +87,7 @@ async def upload_book(
     )
     return APIResponse(
         success=True,
-        data=UploadBookResponse.from_entity(book),
+        data=UploadBookResponse.from_entity(result.book),
         message="Book uploaded, processing started",
     )
 
@@ -130,7 +130,7 @@ async def processing_status(
 
     async def event_generator():
         pubsub = redis_client.pubsub()
-        channel = book_processing_channel(str(book_id))
+        channel = book_asset_processing_channel(str(book.primary_asset_id.value))
         await pubsub.subscribe(channel)
         try:
             yield {
@@ -383,8 +383,9 @@ async def delete_book(
     current_user: User = Security(get_current_user, scopes=["me"]),
     uow=Depends(get_uow),
     cache: RedisCache = Depends(get_cache),
+    storage: FileStorage = Depends(get_file_storage),
 ) -> MessageResponse:
-    use_case = DeleteBook(uow, cache)
+    use_case = RemoveLibraryItem(uow, cache, storage)
     await use_case.execute(
         book_id=book_id,
         owner_user_id=current_user.id.value,

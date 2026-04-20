@@ -149,8 +149,19 @@ uv run ruff check . --fix
 uv run ruff format .
 uvx ty check
 uvx basedpyright
+uvx pylint app tests
+uvx radon cc app tests -s -a
+uvx xenon --max-absolute C --max-modules B --max-average A app tests
+uvx vulture --config pyproject.toml
 uv run pytest
 ```
+
+What these additional tools cover:
+
+- `pylint`: code smells and function/class size signals beyond Ruff
+- `radon`: cyclomatic complexity and maintainability metrics
+- `xenon`: CI-style fail threshold on Radon complexity grades
+- `vulture`: likely dead code and unused objects
 
 Useful focused commands:
 

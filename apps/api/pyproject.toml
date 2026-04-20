@@ -54,11 +54,14 @@ indent-width = 4
 target-version = "py314"
 
 [tool.ruff.lint]
-select = ["E", "W", "F", "I", "UP", "B", "C4", "SIM", "TCH"]
+select = ["E", "W", "F", "I", "UP", "B", "C4", "SIM", "TCH", "C90"]
 ignore = [
     "B008",
     "E501",
 ]
+
+[tool.ruff.lint.mccabe]
+max-complexity = 12
 
 [tool.ruff.format]
 quote-style = "double"
@@ -79,3 +82,58 @@ exclude = [
     "build",
     "dist",
 ]
+
+[tool.pylint.main]
+ignore-paths = [
+    "^\\.venv/",
+    "^build/",
+    "^dist/",
+    "^alembic/versions/",
+]
+jobs = 0
+py-version = "3.14"
+
+[tool.pylint.design]
+max-args = 8
+max-attributes = 16
+max-bool-expr = 6
+max-branches = 15
+max-locals = 20
+max-returns = 8
+max-statements = 50
+
+[tool.pylint."messages control"]
+disable = [
+    "import-error",
+    "no-name-in-module",
+    "missing-module-docstring",
+    "missing-class-docstring",
+    "missing-function-docstring",
+    "too-few-public-methods",
+    "duplicate-code",
+    "invalid-name",
+    "line-too-long",
+    "redefined-builtin",
+    "redefined-outer-name",
+    "too-many-positional-arguments",
+    "too-many-public-methods",
+]
+
+[tool.vulture]
+paths = ["app", "tests"]
+exclude = [
+    "alembic/versions/",
+    ".venv/",
+    "build/",
+    "dist/",
+]
+ignore_decorators = [
+    "@router.*",
+    "@app.*",
+    "@pytest.fixture",
+]
+ignore_names = [
+    "test_*",
+]
+min_confidence = 80
+sort_by_size = true

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from sqlalchemy import or_, select
+from sqlalchemy import func, or_, select
 
 from app.domain.auth.value_objects import UserId
 from app.domain.book_asset.value_objects import BookAssetId, ProcessingStatus
@@ -37,7 +37,6 @@ from app.infrastructure.persistence.repositories._compat import (
     detect_file_size_bytes,
     detect_mime_type,
     detect_original_filename,
-    ensure_library_item,
 )
 
 if TYPE_CHECKING:
@@ -172,15 +171,6 @@ class SqlAlchemyBookRepository(BookRepository):
             )
             model.updated_at = book.updated_at
 
-        if book.created_by_user_id is not None:
-            await ensure_library_item(
-                self.session,
-                user_id=book.created_by_user_id.value,
-                book_id=book.id.value,
-                created_at=book.created_at,
-                updated_at=book.updated_at,
-            )
-
     async def get(self, book_id: BookId) -> Book | None:
         stmt = (
             select(BookModel, BookAssetModel)
@@ -301,6 +291,15 @@ class SqlAlchemyBookRepository(BookRepository):
         )
         rows = (await self.session.execute(stmt)).all()
         return [self._to_entity(model, asset_model) for model, asset_model in rows]
+
+    async def count_referencing_asset(self, *, asset_id: BookAssetId) -> int:
+        stmt = (
+            select(func.count())
+            .select_from(BookModel)
+            .where(BookModel.primary_asset_id == asset_id.value)
+        )
+        result = await self.session.execute(stmt)
+        return result.scalar_one()
 
     async def delete(self, *, book_id: BookId) -> None:
         model = await self.session.get(BookModel, book_id.value)

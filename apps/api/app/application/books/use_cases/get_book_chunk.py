@@ -15,7 +15,7 @@ from app.domain.book_chunks.value_objects import (
     StartWordIndex,
 )
 from app.domain.books.value_objects import BookId
-from app.infrastructure.cache.keys import book_chunk_key
+from app.infrastructure.cache.keys import book_asset_chunk_key
 
 if TYPE_CHECKING:
     from app.application.common.unit_of_work import AbstractUnitOfWork
@@ -69,7 +69,6 @@ class GetBookChunk:
         chunk_index: int,
         owner_user_id: UUID,
     ) -> BookChunk:
-        # 1. Verify book ownership
         book = await self._uow.books.get_for_owner(
             book_id=BookId(book_id),
             owner_user_id=UserId(owner_user_id),
@@ -77,16 +76,13 @@ class GetBookChunk:
         if book is None:
             raise NotFoundError("Book not found")
 
-        # 2. Try Redis cache
-        cache_key = book_chunk_key(str(book_id), chunk_index)
+        cache_key = book_asset_chunk_key(str(book.primary_asset_id.value), chunk_index)
         cached = await self._cache.get_json(cache_key)
 
         if cached is not None and _is_cached_book_chunk(cached):
-            # Cache hit — refresh TTL and return without DB query
             await self._cache.touch(cache_key, ttl_seconds=CHUNK_CACHE_TTL_SECONDS)
             return _from_cache(cached, book_asset_id=book.primary_asset_id)
 
-        # 3. Cache miss — fetch from DB
         chunk = await self._uow.book_chunks.get_by_index(
             book_asset_id=book.primary_asset_id,
             chunk_index=ChunkIndex(chunk_index),
@@ -94,7 +90,6 @@ class GetBookChunk:
         if chunk is None:
             raise NotFoundError("Chunk not found")
 
-        # 4. Populate cache with full entity data
         await self._cache.set_json(
             cache_key,
             _to_cache(chunk, book_id=book.id),

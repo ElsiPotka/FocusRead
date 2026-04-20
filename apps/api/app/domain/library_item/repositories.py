@@ -32,4 +32,13 @@ class LibraryItemRepository(ABC):
     async def list_for_user(self, *, user_id: UserId) -> list[LibraryItem]: ...
 
     @abstractmethod
+    async def count_active_for_book(self, *, book_id: BookId) -> int:
+        """Count non-revoked, non-expired library items referencing a book.
+
+        Used as a reference-safety check when considering whether a
+        catalog `Book` can be torn down. Filters on
+        `access_status = 'active'`.
+        """
+
+    @abstractmethod
     async def delete(self, *, item_id: LibraryItemId) -> None: ...

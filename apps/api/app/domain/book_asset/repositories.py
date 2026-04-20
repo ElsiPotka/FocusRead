@@ -28,3 +28,12 @@ class BookAssetRepository(ABC):
         adding multi-format support later (`book_formats`) only changes this
         method, not every use case.
         """
+
+    @abstractmethod
+    async def delete(self, *, asset_id: BookAssetId) -> None:
+        """Delete the asset row (chunks + TOC entries cascade).
+
+        Storage-blob deletion is the caller's responsibility — the
+        persistence layer only knows the row. The asset's `storage_key`
+        must be captured before delete and fed to `FileStorage.delete`.
+        """

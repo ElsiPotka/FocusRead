@@ -112,6 +112,11 @@ class SqlAlchemyBookAssetRepository(BookAssetRepository):
             return None
         return self._to_entity(model)
 
+    async def delete(self, *, asset_id: BookAssetId) -> None:
+        model = await self.session.get(BookAssetModel, asset_id.value)
+        if model is not None:
+            await self.session.delete(model)
+
     @staticmethod
     def _to_entity(model: BookAssetModel) -> BookAsset:
         return BookAsset(

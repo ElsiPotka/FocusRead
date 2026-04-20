@@ -55,6 +55,37 @@ class SqlAlchemyBookChunkRepository(BookChunkRepository):
         for chunk in chunks:
             await self.save(chunk)
 
+    async def upsert_by_asset_index(self, chunk: BookChunk) -> BookChunk:
+        stmt = select(BookChunkModel).where(
+            BookChunkModel.book_asset_id == chunk.book_asset_id.value,
+            BookChunkModel.chunk_index == chunk.chunk_index.value,
+        )
+        result = await self.session.execute(stmt)
+        existing = result.scalar_one_or_none()
+        if existing is None:
+            model = BookChunkModel(
+                id=chunk.id.value,
+                book_asset_id=chunk.book_asset_id.value,
+                chunk_index=chunk.chunk_index.value,
+                start_word_index=chunk.start_word_index.value,
+                word_data=chunk.word_data.value,
+                word_count=chunk.word_count.value,
+                page_start=chunk.page_start,
+                page_end=chunk.page_end,
+                created_at=chunk.created_at,
+                updated_at=chunk.updated_at,
+            )
+            self.session.add(model)
+            return chunk
+
+        existing.start_word_index = chunk.start_word_index.value
+        existing.word_data = chunk.word_data.value
+        existing.word_count = chunk.word_count.value
+        existing.page_start = chunk.page_start
+        existing.page_end = chunk.page_end
+        existing.updated_at = chunk.updated_at
+        return self._to_entity(existing)
+
     async def get_by_index(
         self, *, book_asset_id: BookAssetId, chunk_index: ChunkIndex
     ) -> BookChunk | None:

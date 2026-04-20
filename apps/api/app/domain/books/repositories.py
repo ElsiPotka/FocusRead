@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from app.domain.auth.value_objects import UserId
+    from app.domain.book_asset.value_objects import BookAssetId
     from app.domain.books.entities import Book
     from app.domain.books.filter import BookFilter
     from app.domain.books.value_objects import BookId
@@ -38,6 +39,17 @@ class BookRepository(ABC):
 
     @abstractmethod
     async def list_by_ids(self, book_ids: list[BookId]) -> list[Book]: ...
+
+    @abstractmethod
+    async def count_referencing_asset(self, *, asset_id: BookAssetId) -> int:
+        """Count catalog books whose `primary_asset_id` points at this asset.
+
+        Used to decide whether an asset blob can be torn down. As long as
+        any book references the asset (via `books.primary_asset_id`), the
+        asset row and storage blob must be retained — the FK uses
+        `ON DELETE RESTRICT` at the schema level, so this check prevents
+        integrity errors at the application layer.
+        """
 
     @abstractmethod
     async def delete(self, *, book_id: BookId) -> None: ...

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 
 from app.domain.auth.value_objects import UserId
 from app.domain.books.value_objects import BookId
@@ -129,6 +129,18 @@ class SqlAlchemyLibraryItemRepository(LibraryItemRepository):
         )
         result = await self.session.execute(stmt)
         return [self._to_entity(m) for m in result.scalars().all()]
+
+    async def count_active_for_book(self, *, book_id: BookId) -> int:
+        stmt = (
+            select(func.count())
+            .select_from(LibraryItemModel)
+            .where(
+                LibraryItemModel.book_id == book_id.value,
+                LibraryItemModel.access_status == AccessStatus.ACTIVE.value,
+            )
+        )
+        result = await self.session.execute(stmt)
+        return result.scalar_one()
 
     async def delete(self, *, item_id: LibraryItemId) -> None:
         model = await self.session.get(LibraryItemModel, item_id.value)

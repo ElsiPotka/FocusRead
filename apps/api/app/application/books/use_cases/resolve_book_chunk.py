@@ -32,7 +32,6 @@ class ResolveBookChunk:
         word_index: int,
         owner_user_id: UUID,
     ) -> ResolvedChunk:
-        # 1. Verify book ownership
         book = await self._uow.books.get_for_owner(
             book_id=BookId(book_id),
             owner_user_id=UserId(owner_user_id),
@@ -40,7 +39,6 @@ class ResolveBookChunk:
         if book is None:
             raise NotFoundError("Book not found")
 
-        # 2. Find chunk containing this word index
         chunk = await self._uow.book_chunks.get_by_word_index(
             book_asset_id=book.primary_asset_id,
             start_word_index=word_index,
@@ -48,7 +46,6 @@ class ResolveBookChunk:
         if chunk is None:
             raise NotFoundError("No chunk found for the given word index")
 
-        # 3. Compute local offset within the chunk
         local_offset = word_index - chunk.start_word_index.value
 
         return ResolvedChunk(
